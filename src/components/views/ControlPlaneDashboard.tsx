@@ -1,9 +1,10 @@
-import React from 'react';
-import { Shield, Users, CreditCard, Server, Activity, ShieldAlert } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Server, ShieldAlert, Code2, Search, Settings } from 'lucide-react';
 import { VSCodeShell } from '../layout/VSCodeShell';
 import { HardwareMonitoring } from './HardwareMonitoring';
 import { CoreInfrastructure } from './CoreInfrastructure';
 import { SecretsVault } from './SecretsVault';
+import { LocalEnvManager } from './LocalEnvManager';
 
 interface DashboardProps {
   view: string;
@@ -11,10 +12,9 @@ interface DashboardProps {
 }
 
 export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewChange }) => {
-  // Map our App-level views to the sidebar options
-  const [activeTab, setActiveTab] = React.useState(view === 'control-plane' ? 'hardware' : 'secrets');
+  const [activeSidebar, setActiveSidebar] = useState<string>('explorer');
+  const [activeTab, setActiveTab] = useState('hardware');
 
-  // To support the routing appropriately via Sidebar clicks
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
   };
@@ -22,21 +22,20 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
   const currentTabName = 
     activeTab === 'infrastructure' ? 'Core Architecture' :
     activeTab === 'secrets' ? 'Secrets Vault' :
+    activeTab === 'localenv' ? 'Local .env Manager' :
     activeTab === 'hardware' ? 'Node Telemetry' : 'Control Plane';
 
-  // VS Code Sidebar Content definitions
-  const SidebarContent = (
+  // Different Sidebars based on activity bar selection
+  const ExplorerSidebar = (
     <>
       <div className="px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-vs-border bg-vs-header flex justify-between items-center">
          <span>EXPLORER</span>
          <span>...</span>
       </div>
-      
       <div className="flex-1 py-2 overflow-y-auto custom-scrollbar">
          <div className="px-5 py-2 text-[10.5px] font-bold text-gray-400 font-mono tracking-wider flex items-center group cursor-pointer hover:text-gray-200">
            <span>▼</span><span className="ml-2">MULTI-TENANT-ADMIN</span>
          </div>
-         
          <nav className="space-y-0.5 mt-1 border-l border-vs-border ml-6 pl-1">
             <NavItem 
               icon={<Shield size={14} className="text-yellow-500" />} 
@@ -46,9 +45,15 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
             />
             <NavItem 
               icon={<ShieldAlert size={14} className="text-purple-500" />} 
-              label="Secrets Vault.env" 
+              label="Cloud Secrets Vault.env" 
               active={activeTab === 'secrets'} 
               onClick={() => handleNavClick('secrets')} 
+            />
+            <NavItem 
+              icon={<Code2 size={14} className="text-[#007fd4]" />} 
+              label="Local Workspace .env" 
+              active={activeTab === 'localenv'} 
+              onClick={() => handleNavClick('localenv')} 
             />
             <NavItem 
               icon={<Server size={14} className="text-blue-500" />} 
@@ -58,18 +63,42 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
             />
          </nav>
       </div>
-
-      <div className="p-4 border-t border-vs-border text-[10px] text-gray-500 flex justify-between items-center bg-vs-base">
-         <span>Platform Host: Embedded Extension</span>
-      </div>
     </>
   );
 
+  const SearchSidebar = (
+    <div className="p-4 flex flex-col h-full text-vs-text">
+       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">SEARCH</div>
+       <input type="text" placeholder="Search" className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full mb-2" />
+       <input type="text" placeholder="Replace" className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" />
+    </div>
+  );
+
+  const SettingsSidebar = (
+    <div className="p-4 flex flex-col h-full text-vs-text">
+       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">SETTINGS</div>
+       <div className="text-[12px] text-gray-400">Manage extension preferences and cloud sync.</div>
+    </div>
+  );
+
+  const getSidebarContent = () => {
+    switch (activeSidebar) {
+      case 'explorer': return ExplorerSidebar;
+      case 'search': return SearchSidebar;
+      case 'settings': return SettingsSidebar;
+      default: return (
+        <div className="p-4 text-xs text-gray-500 uppercase tracking-widest">
+           {activeSidebar} view
+        </div>
+      );
+    }
+  };
+
   return (
     <VSCodeShell
-      activeSidebar="explorer"
-      onSidebarChange={() => {}}
-      sidebarContent={SidebarContent}
+      activeSidebar={activeSidebar}
+      onSidebarChange={setActiveSidebar}
+      sidebarContent={getSidebarContent()}
       topBarTitle={currentTabName}
       headerContent={
         <div className="flex items-center text-vs-text-muted gap-1">
@@ -84,6 +113,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
       {activeTab === 'infrastructure' && <CoreInfrastructure />}
       {activeTab === 'hardware' && <HardwareMonitoring />}
       {activeTab === 'secrets' && <SecretsVault />}
+      {activeTab === 'localenv' && <LocalEnvManager />}
     </VSCodeShell>
   );
 };

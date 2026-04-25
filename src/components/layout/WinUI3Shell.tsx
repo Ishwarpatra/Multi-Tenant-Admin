@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Minus, Square, X, Settings } from 'lucide-react';
 
 interface WinUI3ShellProps {
@@ -7,6 +7,8 @@ interface WinUI3ShellProps {
 }
 
 export const WinUI3Shell: React.FC<WinUI3ShellProps> = ({ children, title = 'Application' }) => {
+  const [activeTab, setActiveTab] = useState<'hardware' | 'logs'>('hardware');
+
   return (
     <div className="w-full h-full flex flex-col bg-[#202020] text-white font-[Segoe_UI,sans-serif] shadow-2xl rounded-t-xl overflow-hidden border border-[#303030]">
       {/* Mica/Acrylic style title bar */}
@@ -35,39 +37,55 @@ export const WinUI3Shell: React.FC<WinUI3ShellProps> = ({ children, title = 'App
       
       {/* Ribbon / Toolbar */}
       <div className="h-12 bg-[#202020] border-b border-[#303030] flex items-center px-2 shadow-sm flex-shrink-0">
-         <div className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors">
+         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
             File
-         </div>
-         <div className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors">
+         </button>
+         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
             Edit
-         </div>
-         <div className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors">
+         </button>
+         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
             View
-         </div>
-         <div className="ml-auto px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors">
+         </button>
+         <button className="ml-auto px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
             <Settings size={14} />
-         </div>
+         </button>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden flex bg-[#1e1e1e]">
          {/* Native-looking side navigation */}
          <div className="w-60 bg-[#202020] border-r border-[#303030] flex flex-col p-2 space-y-1 z-10 flex-shrink-0 shadow-xl">
-             <div className="px-3 py-2 text-sm text-white bg-[#303030] rounded-sm font-medium flex items-center">
-               <div className="w-1 h-3 bg-blue-500 rounded-full mr-3"></div>
+             <div className="px-3 py-2 text-sm text-white bg-transparent rounded-sm font-medium flex items-center opacity-50 uppercase tracking-widest text-[10px] mt-2 mb-1">
                Agent Setup
              </div>
-             <div className="px-3 py-2 text-sm text-gray-400 hover:bg-[#2d2d2d] rounded-sm transition-colors cursor-pointer ml-4">
-               Hardware Identity
+             <div 
+               onClick={() => setActiveTab('hardware')}
+               className={`px-3 py-2 text-sm rounded-sm transition-colors cursor-pointer flex items-center ${activeTab === 'hardware' ? 'bg-[#303030] text-white' : 'text-gray-400 hover:bg-[#2d2d2d]'}`}
+             >
+               {activeTab === 'hardware' && <div className="w-1 h-3 bg-blue-500 rounded-full mr-3 absolute left-3"></div>}
+               <span className={activeTab === 'hardware' ? 'ml-4' : 'ml-4'}>Hardware Identity</span>
              </div>
-             <div className="px-3 py-2 text-sm text-gray-400 hover:bg-[#2d2d2d] rounded-sm transition-colors cursor-pointer ml-4">
-               Local Logs
+             <div 
+               onClick={() => setActiveTab('logs')}
+               className={`px-3 py-2 text-sm rounded-sm transition-colors cursor-pointer flex items-center ${activeTab === 'logs' ? 'bg-[#303030] text-white' : 'text-gray-400 hover:bg-[#2d2d2d]'}`}
+             >
+               {activeTab === 'logs' && <div className="w-1 h-3 bg-blue-500 rounded-full mr-3 absolute left-3"></div>}
+               <span className={activeTab === 'logs' ? 'ml-4' : 'ml-4'}>Local Logs</span>
              </div>
          </div>
          
          {/* Actual view */}
          <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#1c1c1c]">
-           {children}
+           {activeTab === 'hardware' ? children : (
+             <div className="p-8 h-full flex flex-col font-mono text-sm">
+               <h2 className="text-xl font-sans font-semibold mb-4 border-b border-[#303030] pb-2 text-white">System Events</h2>
+               <div className="flex-1 bg-black p-4 rounded border border-[#303030] text-green-400 overflow-y-auto custom-scrollbar">
+                 <div>[INFO] Proxy Agent Started.</div>
+                 <div>[INFO] Loaded configuration from C:\ProgramData\ProxyAgent\config.yml</div>
+                 <div>[WARN] Awaiting hardware identity bonding...</div>
+               </div>
+             </div>
+           )}
          </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Copy, ShieldAlert, KeyRound, Check, Filter } from 'lucide-react';
+import { Eye, EyeOff, Copy, ShieldAlert, KeyRound, Check, Filter, Download, Plus, X } from 'lucide-react';
 
 interface SecretEntry {
   id: string;
@@ -9,7 +9,7 @@ interface SecretEntry {
   lastUpdated: string;
 }
 
-const MOCK_SECRETS: SecretEntry[] = [
+const INITIAL_SECRETS: SecretEntry[] = [
   { id: '1', keyName: 'STRIPE_SECRET_KEY', value: 'sk_live_51Nw9x2D...', env: 'Production', lastUpdated: '2 hours ago' },
   { id: '2', keyName: 'AWS_ACCESS_KEY_ID', value: 'AKIAIOSFODNN7EXAMPLE', env: 'Production', lastUpdated: '3 days ago' },
   { id: '3', keyName: 'OPENAI_API_KEY', value: 'sk-proj-783...', env: 'Staging', lastUpdated: '1 week ago' },
@@ -17,9 +17,17 @@ const MOCK_SECRETS: SecretEntry[] = [
 ];
 
 export const SecretsVault: React.FC = () => {
+  const [secrets, setSecrets] = useState<SecretEntry[]>(INITIAL_SECRETS);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All' | 'Production' | 'Staging' | 'Development'>('All');
+  
+  const [showInjectModal, setShowInjectModal] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const [newEnv, setNewEnv] = useState<'Production' | 'Staging' | 'Development'>('Development');
+
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const toggleReveal = (id: string) => {
     const newRevealed = new Set(revealed);
@@ -37,10 +45,36 @@ export const SecretsVault: React.FC = () => {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const filteredSecrets = MOCK_SECRETS.filter(s => filter === 'All' || s.env === filter);
+  const handleInject = () => {
+    if (!newKeyName || !newValue) return;
+    setSecrets(prev => [...prev, {
+      id: Date.now().toString(),
+      keyName: newKeyName,
+      value: newValue,
+      env: newEnv,
+      lastUpdated: 'Just now'
+    }]);
+    setShowInjectModal(false);
+    setNewKeyName('');
+    setNewValue('');
+    setNewEnv('Development');
+  };
+
+  const filteredSecrets = secrets.filter(s => filter === 'All' || s.env === filter);
+
+  const generatedYaml = `name: Inject Active Secrets
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inject & Mask Values
+        run: |${
+filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n          echo "${s.keyName}=$${s.keyName}" >> $GITHUB_ENV`).join('')
+        }
+`;
 
   return (
-    <div className="p-8 animate-in fade-in duration-300">
+    <div className="p-8 animate-in fade-in duration-300 relative">
       <div className="mb-8 flex items-start justify-between">
          <div>
             <h2 className="text-white text-xl font-light tracking-tight flex items-center gap-3">
@@ -61,7 +95,6 @@ export const SecretsVault: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3">
-               <Filter size={14} className="text-gray-500" />
                <div className="flex bg-vs-base rounded flex-row border border-vs-border p-1">
                   {['All', 'Production', 'Staging', 'Development'].map(env => (
                     <button 
@@ -73,8 +106,11 @@ export const SecretsVault: React.FC = () => {
                     </button>
                   ))}
                </div>
-               <button className="bg-vs-accent hover:bg-vs-accent-hover text-white px-4 py-1.5 text-xs rounded-sm transition-all shadow-sm focus:outline-none ml-2">
-                 Inject Secret
+               <button onClick={() => setShowExportModal(true)} className="bg-vs-base hover:bg-vs-hover text-gray-300 border border-vs-border px-3 py-1.5 text-xs rounded-sm transition-colors shadow-sm focus:outline-none ml-2 flex items-center gap-1.5">
+                 <Download size={14} /> Export CI/CD
+               </button>
+               <button onClick={() => setShowInjectModal(true)} className="bg-vs-accent hover:bg-vs-accent-hover text-white px-3 py-1.5 text-xs rounded-sm transition-colors shadow-sm focus:outline-none flex items-center gap-1.5">
+                 <Plus size={14} /> Inject Secret
                </button>
             </div>
         </div>
@@ -99,7 +135,7 @@ export const SecretsVault: React.FC = () => {
                        {secret.keyName}
                     </td>
                     <td className="px-6 py-4">
-                       <code className="px-2 py-1 bg-vs-base border border-vs-border-light rounded text-[12px] text-gray-300 font-mono inline-block min-w-[200px]">
+                       <code className="px-2 py-1 bg-vs-base border border-vs-border-light rounded text-[12px] text-gray-300 font-mono inline-block min-w-[200px] break-all max-w-[250px]">
                           {isRevealed ? secret.value : '************************'}
                        </code>
                     </td>
@@ -136,6 +172,60 @@ export const SecretsVault: React.FC = () => {
             </tbody>
         </table>
       </div>
+
+      {showInjectModal && (
+         <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div className="bg-vs-panel border border-vs-border rounded shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+               <div className="px-4 py-3 border-b border-vs-border flex justify-between items-center bg-vs-header">
+                 <h2 className="text-white text-sm font-medium">Inject Secret</h2>
+                 <button onClick={() => setShowInjectModal(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>
+               </div>
+               <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Key Name</label>
+                    <input value={newKeyName} onChange={e=>setNewKeyName(e.target.value)} placeholder="e.g. AWS_ACCESS_KEY" className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Value</label>
+                    <input type="password" value={newValue} onChange={e=>setNewValue(e.target.value)} placeholder="Secret value..." className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Environment Scope</label>
+                    <select value={newEnv} onChange={e=>setNewEnv(e.target.value as any)} className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent">
+                      <option value="Development">Development</option>
+                      <option value="Staging">Staging</option>
+                      <option value="Production">Production</option>
+                    </select>
+                  </div>
+               </div>
+               <div className="p-4 border-t border-vs-border flex justify-end gap-2 bg-vs-bg">
+                 <button onClick={() => setShowInjectModal(false)} className="px-4 py-1.5 text-xs text-gray-400 hover:text-white">Cancel</button>
+                 <button onClick={handleInject} disabled={!newKeyName || !newValue} className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded disabled:opacity-50">Create Key</button>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {showExportModal && (
+         <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div className="bg-vs-panel border border-vs-border rounded shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden">
+               <div className="px-4 py-3 border-b border-vs-border flex justify-between items-center bg-vs-header">
+                 <h2 className="text-white text-sm font-medium">Export CI/CD Pipeline (GitHub Actions)</h2>
+                 <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>
+               </div>
+               <div className="p-4">
+                  <p className="text-xs text-gray-400 mb-4">
+                    The block below uses <code className="text-gray-300">::add-mask::</code> to ensure that secrets injected into the CI environment 
+                    are never accidentally leaked in pipeline logs.
+                  </p>
+                  <textarea readOnly value={generatedYaml} className="w-full h-64 bg-black border border-vs-border p-3 text-xs text-green-400 rounded outline-none font-mono resize-none" />
+               </div>
+               <div className="p-4 border-t border-vs-border flex justify-end bg-vs-bg">
+                 <button onClick={() => navigator.clipboard.writeText(generatedYaml)} className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded flex items-center gap-1 border border-transparent shadow-sm"><Copy size={14}/> Copy Pipeline YAML</button>
+               </div>
+            </div>
+         </div>
+      )}
     </div>
   );
 };
