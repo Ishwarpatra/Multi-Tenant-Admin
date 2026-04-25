@@ -1,0 +1,104 @@
+import React from 'react';
+import { Activity, Settings, Files, Search, Code, LayoutGrid } from 'lucide-react';
+
+interface VSCodeShellProps {
+  children: React.ReactNode;
+  activeSidebar: string;
+  onSidebarChange: (id: string) => void;
+  sidebarContent?: React.ReactNode;
+  topBarTitle?: string;
+  headerContent?: React.ReactNode;
+}
+
+export const VSCodeShell: React.FC<VSCodeShellProps> = ({ 
+  children, 
+  activeSidebar, 
+  onSidebarChange, 
+  sidebarContent,
+  topBarTitle = "Control Plane Dashboard",
+  headerContent
+}) => {
+  return (
+    <div className="bg-vs-base min-h-screen flex flex-col font-sans text-vs-text overflow-hidden selection:bg-blue-500/30">
+      
+      {/* Mock VS Code Title Bar */}
+      <div className="h-8 bg-vs-header flex items-center justify-center border-b border-vs-border flex-shrink-0 relative">
+        <div className="absolute left-3 flex gap-2">
+           <div className="w-3 h-3 rounded-full bg-vs-error border border-[#d64010]"></div>
+           <div className="w-3 h-3 rounded-full bg-[#f3c800] border border-[#d4ae00]"></div>
+           <div className="w-3 h-3 rounded-full bg-vs-success border border-[#009b43]"></div>
+        </div>
+        <span className="text-[11px] text-gray-400 font-medium tracking-wide">
+          Multi-Tenant Webview (Extension Simulation) - Visual Studio Code
+        </span>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+         {/* Activity Bar (Leftmost narrow strip) */}
+         <div className="w-12 bg-vs-header border-r border-vs-border flex flex-col items-center py-2 flex-shrink-0 gap-4 z-20">
+            <ActivityIcon id="explorer" icon={<Files size={24} strokeWidth={1.5}/>} active={activeSidebar === 'explorer'} onClick={() => onSidebarChange('explorer')} />
+            <ActivityIcon id="search" icon={<Search size={24} strokeWidth={1.5}/>} active={activeSidebar === 'search'} onClick={() => onSidebarChange('search')} />
+            <ActivityIcon id="source-control" icon={<Code size={24} strokeWidth={1.5}/>} active={activeSidebar === 'source-control'} onClick={() => onSidebarChange('source-control')} />
+            <ActivityIcon id="dashboard" icon={<LayoutGrid size={24} strokeWidth={1.5}/>} active={activeSidebar === 'dashboard'} onClick={() => onSidebarChange('dashboard')} />
+            
+            <div className="mt-auto mb-2 relative">
+               <ActivityIcon id="settings" icon={<Settings size={24} strokeWidth={1.5}/>} active={activeSidebar === 'settings'} onClick={() => onSidebarChange('settings')} />
+            </div>
+         </div>
+
+         {/* Primary Sidebar */}
+         {sidebarContent && (
+            <div className="w-60 bg-vs-panel border-r border-vs-border flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.2)] flex-shrink-0">
+               {sidebarContent}
+            </div>
+         )}
+         
+         {/* Main Editor Area */}
+         <div className="flex-1 flex flex-col overflow-hidden bg-vs-base">
+            {/* Mock Editor Tabs */}
+            <div className="h-9 bg-vs-panel flex flex-shrink-0 relative overflow-x-auto no-scrollbar">
+               <div className="px-4 h-full bg-vs-base border-t border-[#007fd4] border-r border-vs-border flex items-center gap-2 text-white min-w-[140px]">
+                  <Activity size={14} className="text-vs-accent" />
+                  <span className="text-[12px] italic">{topBarTitle}.tsx</span>
+               </div>
+            </div>
+
+            {/* Breadcrumb / Top Header Area inside editor */}
+            {headerContent && (
+              <div className="min-h-7 py-1 px-4 border-b border-vs-border/40 flex items-center justify-between flex-wrap text-[11.5px] bg-vs-base text-gray-400 z-10 shrink-0 shadow-sm">
+                 {headerContent}
+              </div>
+            )}
+            
+            {/* Actual Content Frame */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+               {children}
+            </div>
+         </div>
+      </div>
+
+      {/* VS Code Status Bar */}
+      <div className="h-6 bg-[#007fd4] text-white flex items-center px-3 justify-between text-[11px] font-medium flex-shrink-0 z-30">
+        <div className="flex items-center gap-4">
+           <span className="truncate">Multi-Tenant Platform Extension Host Active</span>
+           <span className="hidden sm:inline-flex opacity-80 cursor-pointer hover:opacity-100">Telemetry Piped</span>
+        </div>
+        <div className="flex items-center gap-4 opacity-90">
+           <span className="hover:opacity-100 cursor-pointer">Live Node: 1,402ms</span>
+           <span className="hover:opacity-100 cursor-pointer">React Native/Web</span>
+           <span className="hover:opacity-100 cursor-pointer">UTF-8</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ActivityIcon = ({icon, active, onClick, id}: {icon: React.ReactNode, active: boolean, onClick: () => void, id: string}) => (
+   <div 
+     onClick={onClick}
+     className={`relative w-full flex justify-center py-2 cursor-pointer transition-colors ${active ? 'text-white' : 'text-vs-text-muted hover:text-gray-300'}`}
+   >
+     {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white"></div>}
+     {icon}
+   </div>
+);
