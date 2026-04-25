@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Shield, CreditCard, Database, Box, Plug, CheckCircle2, Settings, Terminal, ToggleLeft, ToggleRight, Loader2 } from 'lucide-react';
 
-export const CoreInfrastructure: React.FC = () => {
+export const CoreInfrastructure: React.FC<{onOpenSettings?: () => void}> = ({onOpenSettings}) => {
   const [activeConfig, setActiveConfig] = useState<string | null>(null);
 
   // RLS State
@@ -119,7 +119,7 @@ export const CoreInfrastructure: React.FC = () => {
 
           <SolutionCard 
             id="billing"
-            onConfigure={() => {}}
+            onConfigure={() => onOpenSettings?.()}
             icon={<CreditCard size={20} className="text-blue-500" />}
             title="3. The 'Billing Nightmare' at Scale"
             subtitle="Solved via Hexagonal Billing Abstraction"

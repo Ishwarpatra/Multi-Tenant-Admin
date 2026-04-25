@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Key } from 'lucide-react';
+import { Save, Plus, Trash2, Key, ChevronRight, FileText, Edit2 } from 'lucide-react';
 
 interface EnvVar {
   key: string;
@@ -14,6 +14,7 @@ export const LocalEnvManager: React.FC = () => {
   
   const [activeFileIdx, setActiveFileIdx] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   // Debounced save
   useEffect(() => {
@@ -60,18 +61,56 @@ export const LocalEnvManager: React.FC = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-         {/* File list */}
-         <div className="w-48 border-r border-[#3c3c3c] bg-[#252526] flex flex-col pt-2">
-            <div className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Workspace Files</div>
-            {envFiles.map((f, idx) => (
+         {/* File list (VS Code Tree View Simulation) */}
+         <div className="w-64 border-r border-[#3c3c3c] bg-[#252526] flex flex-col pt-2 select-none">
+            <div className="px-5 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center justify-between">
+              <span>EXPLORER</span>
+              <span className="cursor-pointer hover:text-gray-300">...</span>
+            </div>
+            
+            <div className="flex flex-col mt-1">
+              {/* Root Folder Level */}
               <div 
-                key={f.name}
-                onClick={() => setActiveFileIdx(idx)}
-                className={`px-4 py-2 text-xs cursor-pointer border-l-2 transition-colors flex items-center gap-2 ${activeFileIdx === idx ? 'bg-[#37373d] text-white border-[#007fd4]' : 'border-transparent hover:bg-[#2a2d2e] text-gray-400'}`}
+                className="flex items-center px-1 py-1 cursor-pointer hover:bg-[#2a2d2e] group"
+                onClick={() => setExpanded(!expanded)}
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> {f.name}
+                 <div className="w-5 flex justify-center text-gray-400">
+                    <ChevronRight size={16} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                 </div>
+                 <span className="text-[11px] font-bold tracking-wider text-gray-300 font-mono uppercase">MULTITENANT-WORKSPACE</span>
               </div>
-            ))}
+              
+              {/* Files Level */}
+              {expanded && (
+                <div className="flex flex-col">
+                  {envFiles.map((f, idx) => (
+                    <div 
+                      key={f.name}
+                      onClick={() => setActiveFileIdx(idx)}
+                      className={`flex items-center pl-6 pr-2 py-1 cursor-pointer transition-colors group relative ${activeFileIdx === idx ? 'bg-[#37373d] text-white' : 'hover:bg-[#2a2d2e] text-[#cccccc]'}`}
+                    >
+                      <div className="w-4 flex justify-center mr-1">
+                        <FileText size={14} className={f.name.includes('production') ? 'text-orange-400' : 'text-yellow-400'} />
+                      </div>
+                      <span className="text-[13px]">{f.name}</span>
+                      
+                      {/* Context Actions (On Hover) */}
+                      <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button className="p-0.5 hover:bg-[#4d4d4d] rounded text-gray-400 hover:text-white" title="Add Variable" onClick={(e) => { e.stopPropagation(); setActiveFileIdx(idx); handleCreate(); }}>
+                           <Plus size={14} />
+                         </button>
+                         <button className="p-0.5 hover:bg-[#4d4d4d] rounded text-gray-400 hover:text-white" title="Rename" onClick={(e) => e.stopPropagation()}>
+                           <Edit2 size={12} />
+                         </button>
+                         <button className="p-0.5 hover:bg-[#4d4d4d] rounded text-gray-400 hover:text-white" title="Delete" onClick={(e) => { e.stopPropagation(); /* mock delete */ }}>
+                           <Trash2 size={12} />
+                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
          </div>
 
          {/* Variables editor */}

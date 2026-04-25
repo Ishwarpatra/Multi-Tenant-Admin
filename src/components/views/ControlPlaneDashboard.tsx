@@ -5,6 +5,7 @@ import { HardwareMonitoring } from './HardwareMonitoring';
 import { CoreInfrastructure } from './CoreInfrastructure';
 import { SecretsVault } from './SecretsVault';
 import { LocalEnvManager } from './LocalEnvManager';
+import { SettingsView } from './SettingsView';
 
 interface DashboardProps {
   view: string;
@@ -23,6 +24,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
     activeTab === 'infrastructure' ? 'Core Architecture' :
     activeTab === 'secrets' ? 'Secrets Vault' :
     activeTab === 'localenv' ? 'Local .env Manager' :
+    activeTab === 'settings' ? 'Settings' :
     activeTab === 'hardware' ? 'Node Telemetry' : 'Control Plane';
 
   // Different Sidebars based on activity bar selection
@@ -85,7 +87,10 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
     switch (activeSidebar) {
       case 'explorer': return ExplorerSidebar;
       case 'search': return SearchSidebar;
-      case 'settings': return SettingsSidebar;
+      case 'settings': {
+        if (activeTab !== 'settings') setActiveTab('settings');
+        return null;
+      }
       default: return (
         <div className="p-4 text-xs text-gray-500 uppercase tracking-widest">
            {activeSidebar} view
@@ -97,7 +102,10 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
   return (
     <VSCodeShell
       activeSidebar={activeSidebar}
-      onSidebarChange={setActiveSidebar}
+      onSidebarChange={(id) => {
+        setActiveSidebar(id);
+        if (id === 'settings') setActiveTab('settings');
+      }}
       sidebarContent={getSidebarContent()}
       topBarTitle={currentTabName}
       headerContent={
@@ -110,10 +118,11 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
         </div>
       }
     >
-      {activeTab === 'infrastructure' && <CoreInfrastructure />}
-      {activeTab === 'hardware' && <HardwareMonitoring />}
-      {activeTab === 'secrets' && <SecretsVault />}
-      {activeTab === 'localenv' && <LocalEnvManager />}
+      <div className={activeTab === 'infrastructure' ? 'block h-full' : 'hidden'}><CoreInfrastructure onOpenSettings={() => setActiveTab('settings')} /></div>
+      <div className={activeTab === 'hardware' ? 'block h-full' : 'hidden'}><HardwareMonitoring /></div>
+      <div className={activeTab === 'secrets' ? 'block h-full' : 'hidden'}><SecretsVault /></div>
+      <div className={activeTab === 'localenv' ? 'block h-full' : 'hidden'}><LocalEnvManager /></div>
+      <div className={activeTab === 'settings' ? 'block h-full' : 'hidden'}><SettingsView /></div>
     </VSCodeShell>
   );
 };

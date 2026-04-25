@@ -36,11 +36,11 @@ export default function App() {
       <DebugToolbar />
       <div className="h-screen w-screen overflow-hidden bg-black flex pt-12 p-4 pb-0 items-end justify-center">
         {activeRootView === 'control' ? (
-          <div className="w-full h-full max-w-7xl relative mx-auto rounded-t-xl overflow-hidden shadow-2xl border border-vs-border-light flex flex-col">
+          <div className="w-full h-full relative mx-auto rounded-t-xl overflow-hidden shadow-2xl border border-vs-border-light flex flex-col">
             <ControlPlaneDashboard view="control-plane" onViewChange={() => {}} />
           </div>
         ) : (
-          <div className="w-full h-full max-w-4xl relative mx-auto rounded-t-xl overflow-hidden shadow-2xl flex flex-col items-center justify-end">
+          <div className="w-full h-full relative mx-auto rounded-t-xl overflow-hidden shadow-2xl flex flex-col">
             <WinUI3Shell title="Data Plane Node Configuration - Standalone Agent">
               <DataPlaneNode />
             </WinUI3Shell>

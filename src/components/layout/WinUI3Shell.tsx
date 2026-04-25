@@ -7,7 +7,8 @@ interface WinUI3ShellProps {
 }
 
 export const WinUI3Shell: React.FC<WinUI3ShellProps> = ({ children, title = 'Application' }) => {
-  const [activeTab, setActiveTab] = useState<'hardware' | 'logs'>('hardware');
+  const [activeTab, setActiveTab] = useState<'hardware' | 'logs' | 'settings'>('hardware');
+  const [menuOpen, setMenuOpen] = useState<'file' | 'edit' | 'view' | null>(null);
 
   return (
     <div className="w-full h-full flex flex-col bg-[#202020] text-white font-[Segoe_UI,sans-serif] shadow-2xl rounded-t-xl overflow-hidden border border-[#303030]">
@@ -36,19 +37,28 @@ export const WinUI3Shell: React.FC<WinUI3ShellProps> = ({ children, title = 'App
       </div>
       
       {/* Ribbon / Toolbar */}
-      <div className="h-12 bg-[#202020] border-b border-[#303030] flex items-center px-2 shadow-sm flex-shrink-0">
-         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
+      <div className="h-12 bg-[#202020] border-b border-[#303030] flex items-center px-2 shadow-sm flex-shrink-0 relative">
+         <button onClick={() => setMenuOpen(menuOpen === 'file' ? null : 'file')} className={`px-3 h-8 flex items-center justify-center gap-2 rounded cursor-pointer text-sm transition-colors border-none ${menuOpen === 'file' ? 'bg-[#3d3d3d] text-white' : 'hover:bg-[#303030] text-gray-300 bg-transparent'}`}>
             File
          </button>
-         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
+         <button onClick={() => setMenuOpen(menuOpen === 'edit' ? null : 'edit')} className={`px-3 h-8 flex items-center justify-center gap-2 rounded cursor-pointer text-sm transition-colors border-none ${menuOpen === 'edit' ? 'bg-[#3d3d3d] text-white' : 'hover:bg-[#303030] text-gray-300 bg-transparent'}`}>
             Edit
          </button>
-         <button className="px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
+         <button onClick={() => setMenuOpen(menuOpen === 'view' ? null : 'view')} className={`px-3 h-8 flex items-center justify-center gap-2 rounded cursor-pointer text-sm transition-colors border-none ${menuOpen === 'view' ? 'bg-[#3d3d3d] text-white' : 'hover:bg-[#303030] text-gray-300 bg-transparent'}`}>
             View
          </button>
-         <button className="ml-auto px-3 h-8 flex items-center justify-center gap-2 hover:bg-[#303030] rounded cursor-pointer text-sm text-gray-300 transition-colors bg-transparent border-none">
+         <button onClick={() => setActiveTab('settings')} className={`ml-auto px-3 h-8 flex items-center justify-center gap-2 rounded cursor-pointer text-sm transition-colors border-none ${activeTab === 'settings' ? 'bg-[#3d3d3d] text-white' : 'hover:bg-[#303030] text-gray-300 bg-transparent'}`}>
             <Settings size={14} />
          </button>
+         
+         {menuOpen && (
+           <div className="absolute top-11 left-2 bg-[#2b2b2b] border border-[#3c3c3c] rounded shadow-xl py-1 z-50 text-sm text-gray-300 min-w-[200px]">
+              <div className="px-4 py-1.5 hover:bg-[#0078d4] hover:text-white cursor-pointer" onClick={() => setMenuOpen(null)}>Export Hardware Profile...</div>
+              <div className="px-4 py-1.5 hover:bg-[#0078d4] hover:text-white cursor-pointer" onClick={() => setMenuOpen(null)}>Network Diagnostics</div>
+              <div className="border-t border-[#444] my-1"></div>
+              <div className="px-4 py-1.5 hover:bg-[#e81123] hover:text-white cursor-pointer" onClick={() => setMenuOpen(null)}>Disconnect Local Agent</div>
+           </div>
+         )}
       </div>
 
       {/* Main Content Area */}
@@ -76,13 +86,27 @@ export const WinUI3Shell: React.FC<WinUI3ShellProps> = ({ children, title = 'App
          
          {/* Actual view */}
          <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#1c1c1c]">
-           {activeTab === 'hardware' ? children : (
+           {activeTab === 'hardware' ? children : activeTab === 'logs' ? (
              <div className="p-8 h-full flex flex-col font-mono text-sm">
                <h2 className="text-xl font-sans font-semibold mb-4 border-b border-[#303030] pb-2 text-white">System Events</h2>
                <div className="flex-1 bg-black p-4 rounded border border-[#303030] text-green-400 overflow-y-auto custom-scrollbar">
                  <div>[INFO] Proxy Agent Started.</div>
                  <div>[INFO] Loaded configuration from C:\ProgramData\ProxyAgent\config.yml</div>
                  <div>[WARN] Awaiting hardware identity bonding...</div>
+               </div>
+             </div>
+           ) : (
+             <div className="p-8 h-full flex flex-col font-sans">
+               <h2 className="text-xl font-semibold mb-4 border-b border-[#303030] pb-2 text-white">Application Settings</h2>
+               <div className="space-y-4">
+                 <div className="flex items-center gap-4 border-b border-[#303030] pb-4">
+                    <span className="text-sm text-gray-300 w-32">Run at startup</span>
+                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                 </div>
+                 <div className="flex items-center gap-4 border-b border-[#303030] pb-4">
+                    <span className="text-sm text-gray-300 w-32">Telemetry Sync</span>
+                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                 </div>
                </div>
              </div>
            )}

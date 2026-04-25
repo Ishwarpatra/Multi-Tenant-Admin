@@ -5,6 +5,9 @@ export const DataPlaneNode: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'hashing' | 'validating' | 'error' | 'success'>('idle');
   const [licenseKey, setLicenseKey] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [rawMbId, setRawMbId] = useState<string | null>(null);
+  const [rawCpuId, setRawCpuId] = useState<string | null>(null);
+  const [hashedId, setHashedId] = useState<string | null>(null);
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -21,17 +24,27 @@ export const DataPlaneNode: React.FC = () => {
   const handleActivate = () => {
     setStatus('hashing');
     setLogs([]);
-    appendLog('Executing WMI query for Motherboard serial number...');
+    setRawMbId(null);
+    setRawCpuId(null);
+    setHashedId(null);
+    
+    appendLog('Executing WMI query: SELECT * FROM Win32_BaseBoard...');
     timeoutRef.current = setTimeout(() => {
+      setRawMbId('BaseBoard_X99_A221');
       appendLog('Found Motherboard ID: BaseBoard_X99_A221');
       appendLog('Executing WMI query for Processor ID...');
+      
       timeoutRef.current = setTimeout(() => {
+        setRawCpuId('BFEBFBFF000906EA');
         appendLog('Found Processor ID: BFEBFBFF000906EA');
         appendLog('Computing cryptographic hash: H(ID_mb || ID_cpu)...');
+        
         timeoutRef.current = setTimeout(() => {
+          setHashedId('8F3A-99B2-C711');
           appendLog('Hash generated: 8F3A-99B2-C711');
           setStatus('validating');
           appendLog('Sending secure payload to Control Plane...');
+          
           timeoutRef.current = setTimeout(() => {
             if (licenseKey.trim() === 'VALID-KEY') {
               setStatus('success');
@@ -41,15 +54,18 @@ export const DataPlaneNode: React.FC = () => {
               appendLog('Connection rejected: Invalid license key.');
             }
           }, 1500);
-        }, 1200);
-      }, 1000);
-    }, 1000);
+        }, 1500);
+      }, 1500);
+    }, 1500);
   };
 
   const handleReset = () => {
     setStatus('idle');
     setLicenseKey('');
     setLogs([]);
+    setRawMbId(null);
+    setRawCpuId(null);
+    setHashedId(null);
   };
 
   return (
@@ -67,14 +83,34 @@ export const DataPlaneNode: React.FC = () => {
 
       <div className="flex flex-col flex-1 max-w-4xl gap-8">
         {/* Hardware Fingerprint Card */}
-        <div className="bg-[#252526] p-6 border border-[#3c3c3c] rounded shadow-md">
+        <div className="bg-[#252526] p-6 border border-[#3c3c3c] rounded shadow-md relative overflow-hidden">
           <h2 className="text-lg font-medium mb-4">Hardware Fingerprint</h2>
           
           {(status === 'hashing' || status === 'validating') && (
-            <div className="absolute inset-0 bg-black/60 z-10 flex flex-col items-center justify-center backdrop-blur-sm rounded">
-              <Loader2 size={40} className="text-blue-500 animate-spin mb-4" />
-              <div className="text-lg font-semibold">{status === 'hashing' ? 'Extracting Identity...' : 'Negotiating Control Plane...'}</div>
-              <div className="text-gray-400 mt-2 text-sm">{logs[logs.length - 1]}</div>
+            <div className="absolute inset-0 bg-black/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm">
+              <div className="w-16 h-16 relative flex justify-center items-center mb-6">
+                <Loader2 size={40} className="text-blue-500 animate-spin absolute" />
+                <div className="w-12 h-12 border-4 border-dashed border-gray-600 rounded-full animate-[spin_3s_linear_infinite]" />
+              </div>
+              <div className="text-xl font-semibold mb-2">{status === 'hashing' ? 'Extracting Identity via WMI...' : 'Negotiating Control Plane...'}</div>
+              <div className="text-green-400 font-mono text-sm max-w-lg text-center h-6">{logs[logs.length - 1]}</div>
+              
+              {status === 'hashing' && (
+                <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-md">
+                  <div className="bg-[#1e1e1e] p-3 border border-[#303030] rounded">
+                    <div className="text-xs text-gray-500 uppercase">Motherboard</div>
+                    <div className="font-mono text-blue-400 text-sm mt-1">{rawMbId || 'Querying...'}</div>
+                  </div>
+                  <div className="bg-[#1e1e1e] p-3 border border-[#303030] rounded">
+                    <div className="text-xs text-gray-500 uppercase">CPU</div>
+                    <div className="font-mono text-blue-400 text-sm mt-1">{rawCpuId || 'Waiting...'}</div>
+                  </div>
+                  <div className="col-span-2 bg-[#1e1e1e] p-3 border border-[#303030] mt-2 rounded">
+                    <div className="text-xs text-gray-500 uppercase">Hash Output</div>
+                    <div className="font-mono text-green-400 text-sm mt-1">{hashedId || (rawMbId && rawCpuId ? 'Hashing...' : 'Pending Inputs...')}</div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -82,7 +118,7 @@ export const DataPlaneNode: React.FC = () => {
             <div className="flex items-center justify-between p-3 bg-[#1e1e1e] border border-[#303030] rounded">
               <span className="text-sm text-gray-400 font-mono">H(ID_mb || ID_cpu)</span>
               <span className="font-mono text-blue-400 font-semibold tracking-wider">
-                {status === 'idle' || status === 'hashing' ? 'PENDING...' : '8F3A-99B2-C711'}
+                {hashedId || 'PENDING...'}
               </span>
             </div>
 
