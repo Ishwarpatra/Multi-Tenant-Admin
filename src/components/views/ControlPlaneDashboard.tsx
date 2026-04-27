@@ -128,13 +128,14 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
 };
 
 const NavItem = ({icon, label, active, onClick}: {icon: React.ReactNode, label: string, active?: boolean, onClick?: () => void}) => (
-  <div 
+  <button 
     onClick={onClick} 
-    className={`px-3 py-1.5 ml-2 flex items-center gap-2 text-[12px] cursor-pointer transition-colors border border-transparent 
+    aria-current={active ? 'page' : undefined}
+    className={`w-full px-3 py-1.5 ml-2 flex items-center gap-2 text-[12px] cursor-pointer transition-colors border border-transparent text-left outline-none focus:ring-1 focus:ring-vs-accent bg-transparent
       ${active ? 'bg-vs-active text-white border-vs-border-light' : 'text-gray-400 hover:bg-vs-hover hover:text-gray-200'}
     `}
   >
      {icon}
      <span className="truncate">{label}</span>
-  </div>
+  </button>
 );

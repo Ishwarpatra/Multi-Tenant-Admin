@@ -2,28 +2,48 @@
 @import "tailwindcss";
 
 @theme {
-  --color-vs-base: #0d0d0d;
-  --color-vs-bg: #1e1e1e;
-  --color-vs-panel: #252526;
-  --color-vs-header: #2d2d2d;
-  --color-vs-hover: #2a2d2e;
-  --color-vs-active: #37373d;
-  --color-vs-border: #3c3c3c;
-  --color-vs-border-light: #454545;
-  --color-vs-text: #cccccc;
-  --color-vs-text-muted: #888888;
-  --color-vs-accent: #0e639c;
-  --color-vs-accent-hover: #1177bb;
-  --color-vs-error: #F4511E;
-  --color-vs-success: #00B050;
-  
+  --color-vs-base: var(--vscode-editor-background, #0d0d0d);
+  --color-vs-bg: var(--vscode-sideBar-background, #1e1e1e);
+  --color-vs-panel: var(--vscode-panel-background, #252526);
+  --color-vs-header: var(--vscode-titleBar-activeBackground, #2d2d2d);
+  --color-vs-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+  --color-vs-active: var(--vscode-list-activeSelectionBackground, #37373d);
+  --color-vs-border: var(--vscode-sideBar-border, #3c3c3c);
+  --color-vs-border-light: var(--vscode-editorGroup-border, #454545);
+  --color-vs-text: var(--vscode-foreground, #cccccc);
+  --color-vs-text-muted: var(--vscode-descriptionForeground, #888888);
+  --color-vs-accent: var(--vscode-button-background, #0e639c);
+  --color-vs-accent-hover: var(--vscode-button-hoverBackground, #1177bb);
+  --color-vs-error: var(--vscode-errorForeground, #f4511e);
+  --color-vs-success: var(--vscode-testing-iconPassed, #00b050);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --vscode-editor-background: #0d0d0d;
+  --vscode-sideBar-background: #1e1e1e;
+  --vscode-panel-background: #252526;
+  --vscode-titleBar-activeBackground: #2d2d2d;
+  --vscode-foreground: #cccccc;
+  --vscode-descriptionForeground: #888888;
+  --vscode-button-background: #0e639c;
+  --vscode-button-hoverBackground: #1177bb;
+  --vscode-errorForeground: #f4511e;
+  --vscode-testing-iconPassed: #00b050;
+  --vscode-sideBar-border: #3c3c3c;
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-list-activeSelectionBackground: #37373d;
+  --vscode-editorGroup-border: #454545;
 }
 
 body {
   margin: 0;
   padding: 0;
+  background-color: var(--vs-base);
+  color: var(--vs-text);
+  font-family: var(--font-sans);
 }
 
 /* VS Code native-like scrollbars */

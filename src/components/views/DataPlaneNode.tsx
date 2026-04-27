@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Cpu, Key, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Cpu, Key, AlertCircle, CheckCircle, Loader2, ShieldAlert, Info } from 'lucide-react';
 
 export const DataPlaneNode: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'hashing' | 'validating' | 'error' | 'success'>('idle');
@@ -69,120 +69,153 @@ export const DataPlaneNode: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-8 bg-[#1c1c1c] text-white">
-      <div className="mb-6 border-b border-[#303030] pb-4">
-        <div className="flex items-center gap-3">
-          <Cpu size={24} className="text-blue-500" />
-          <h1 className="text-2xl font-semibold">Data Plane: Local Hardware Node Setup</h1>
+    <main className="w-full h-full flex flex-col p-8 md:p-12 bg-vs-base text-white animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
+      <header className="mb-8 border-b border-vs-border pb-6 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-vs-accent/10 rounded-lg border border-vs-accent/20">
+            <Cpu size={28} className="text-vs-accent" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Data Plane Identity & Registration</h1>
+            <p className="text-vs-text-muted mt-2 text-[13px] max-w-2xl leading-relaxed">
+              Establishing a cryptographic bond between this hardware agent and a Control Plane tenant partition. 
+              Fingerprinting prevents malicious node spoofing and ensures accurate billing metrics.
+            </p>
+          </div>
         </div>
-        <p className="text-gray-400 mt-2">
-          This panel configures the local agent's connection to the Control Plane. 
-          Your hardware signature ensures exact billing and security alignment.
-        </p>
-      </div>
+      </header>
 
-      <div className="flex flex-col flex-1 max-w-4xl gap-8">
+      <div className="flex flex-col flex-1 gap-10">
         {/* Hardware Fingerprint Card */}
-        <div className="bg-[#252526] p-6 border border-[#3c3c3c] rounded shadow-md relative overflow-hidden">
-          <h2 className="text-lg font-medium mb-4">Hardware Fingerprint</h2>
+        <section 
+          aria-labelledby="hw-setup-title"
+          className="bg-vs-panel p-8 border border-vs-border rounded-sm shadow-xl relative overflow-hidden group min-h-[400px] flex flex-col"
+        >
+          <div className="absolute top-0 left-0 w-1 h-full bg-vs-accent"></div>
+          <h2 id="hw-setup-title" className="text-lg font-medium mb-6 flex items-center gap-2">
+            <ShieldAlert size={20} className="text-vs-accent" />
+            Hardware Handshake Configuration
+          </h2>
           
           {(status === 'hashing' || status === 'validating') && (
-            <div className="absolute inset-0 bg-black/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm">
-              <div className="w-16 h-16 relative flex justify-center items-center mb-6">
-                <Loader2 size={40} className="text-blue-500 animate-spin absolute" />
-                <div className="w-12 h-12 border-4 border-dashed border-gray-600 rounded-full animate-[spin_3s_linear_infinite]" />
+            <div className="absolute inset-0 bg-vs-base/90 z-20 flex flex-col items-center justify-center backdrop-blur-md animate-in fade-in duration-300">
+              <div className="w-20 h-20 relative flex justify-center items-center mb-8">
+                <Loader2 size={48} className="text-vs-accent animate-spin absolute" />
+                <div className="w-16 h-16 border-4 border-dashed border-vs-border-light rounded-full animate-[spin_4s_linear_infinite]" />
               </div>
-              <div className="text-xl font-semibold mb-2">{status === 'hashing' ? 'Extracting Identity via WMI...' : 'Negotiating Control Plane...'}</div>
-              <div className="text-green-400 font-mono text-sm max-w-lg text-center h-6">{logs[logs.length - 1]}</div>
+              <h3 className="text-2xl font-light mb-2 tracking-tight">
+                {status === 'hashing' ? 'Extracting Identity via WMI...' : 'Negotiating Control Plane Link...'}
+              </h3>
+              <div className="text-vs-accent font-mono text-sm max-w-lg text-center h-6 animate-pulse px-6">
+                {logs[logs.length - 1]}
+              </div>
               
               {status === 'hashing' && (
-                <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-md">
-                  <div className="bg-[#1e1e1e] p-3 border border-[#303030] rounded">
-                    <div className="text-xs text-gray-500 uppercase">Motherboard</div>
-                    <div className="font-mono text-blue-400 text-sm mt-1">{rawMbId || 'Querying...'}</div>
+                <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl px-8">
+                  <div className="bg-vs-bg p-4 border border-vs-border rounded shadow-inner">
+                    <div className="text-[10px] text-vs-text-muted uppercase font-bold tracking-widest mb-1">Motherboard</div>
+                    <div className="font-mono text-vs-accent text-[13px] truncate">{rawMbId || 'Executing WMI Query...'}</div>
                   </div>
-                  <div className="bg-[#1e1e1e] p-3 border border-[#303030] rounded">
-                    <div className="text-xs text-gray-500 uppercase">CPU</div>
-                    <div className="font-mono text-blue-400 text-sm mt-1">{rawCpuId || 'Waiting...'}</div>
+                  <div className="bg-vs-bg p-4 border border-vs-border rounded shadow-inner">
+                    <div className="text-[10px] text-vs-text-muted uppercase font-bold tracking-widest mb-1">Processor</div>
+                    <div className="font-mono text-vs-accent text-[13px] truncate">{rawCpuId || 'Awaiting I/O...'}</div>
                   </div>
-                  <div className="col-span-2 bg-[#1e1e1e] p-3 border border-[#303030] mt-2 rounded">
-                    <div className="text-xs text-gray-500 uppercase">Hash Output</div>
-                    <div className="font-mono text-green-400 text-sm mt-1">{hashedId || (rawMbId && rawCpuId ? 'Hashing...' : 'Pending Inputs...')}</div>
+                  <div className="sm:col-span-2 bg-[#060606] p-4 border border-vs-border mt-2 rounded shadow-inner border-dashed">
+                    <div className="text-[10px] text-vs-text-muted uppercase font-bold tracking-widest mb-1">Hashed Hardware ID</div>
+                    <div className="font-mono text-vs-success text-[15px] mt-1">{hashedId || (rawMbId && rawCpuId ? 'Generating SHA-256...' : 'Compiling payload...')}</div>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="space-y-4 relative">
-            <div className="flex items-center justify-between p-3 bg-[#1e1e1e] border border-[#303030] rounded">
-              <span className="text-sm text-gray-400 font-mono">H(ID_mb || ID_cpu)</span>
-              <span className="font-mono text-blue-400 font-semibold tracking-wider">
-                {hashedId || 'PENDING...'}
-              </span>
-            </div>
+          <div className="space-y-6 relative flex-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="hw-hash-display" className="text-[11px] uppercase font-bold text-vs-text-muted tracking-widest">Active Hardware Bond</label>
+                  <div id="hw-hash-display" className="flex items-center justify-between p-4 bg-vs-bg border border-vs-border rounded shadow-inner">
+                    <span className="text-[12px] text-vs-text-muted font-mono leading-none pt-1">SHA-256 ADAPTER BOND</span>
+                    <span className="font-mono text-vs-accent font-semibold tracking-widest text-lg">
+                      {hashedId || '0000-0000-0000'}
+                    </span>
+                  </div>
+                </div>
 
-            <div className="space-y-2 mt-6">
-              <label htmlFor="licenseKey" className="block text-sm text-gray-300 font-medium">One-Time Setup Key</label>
-              <div className="relative">
-                <Key size={16} className="absolute left-3 top-3 text-gray-500" />
-                <input
-                  id="licenseKey"
-                  type="text"
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value)}
-                  placeholder="Enter proxy key (Try: VALID-KEY)"
-                  disabled={status === 'hashing' || status === 'validating'}
-                  className="w-full bg-[#1e1e1e] border border-[#303030] rounded pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50 shadow-inner"
-                />
+                <div className="space-y-2 pt-2">
+                  <label htmlFor="licenseKey" className="text-[11px] uppercase font-bold text-vs-text-muted tracking-widest">Control Plane Proxy Key</label>
+                  <div className="relative group">
+                    <Key size={18} className="absolute left-4 top-3.5 text-vs-text-muted transition-colors group-focus-within:text-vs-accent" />
+                    <input
+                      id="licenseKey"
+                      type="text"
+                      value={licenseKey}
+                      onChange={(e) => setLicenseKey(e.target.value)}
+                      placeholder="Enter activation token (Try: VALID-KEY)"
+                      disabled={status === 'hashing' || status === 'validating' || status === 'success'}
+                      className="w-full bg-vs-bg border border-vs-border rounded pl-12 pr-4 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-vs-accent/50 focus:border-vs-accent transition-all disabled:opacity-50 shadow-inner font-mono tracking-tight"
+                    />
+                  </div>
+                  <p className="text-[11px] text-vs-text-muted italic">Tokens are vaulted in the Control Plane and unique to a single hardware hash.</p>
+                </div>
               </div>
-            </div>
-            
-            {status === 'error' && (
-              <div className="flex items-center gap-3 p-4 bg-[#F4511E]/10 border border-[#F4511E]/30 rounded text-[#F4511E] mt-4">
-                <AlertCircle size={20} />
-                <div className="text-sm">Connection Rejected: The provided setup key is invalid or not registered.</div>
-              </div>
-            )}
 
-            {status === 'success' && (
-              <div className="flex items-center gap-3 p-4 bg-[#00B050]/10 border border-[#00B050]/30 rounded text-[#00B050] mt-4">
-                <CheckCircle size={20} />
-                <div className="text-sm">Hardware ID Handshake Complete. Proxy is online and piping metering data.</div>
-              </div>
-            )}
-            
-            {logs.length > 0 && (
-               <div className="mt-8">
-                 <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Diagnostic Shell Output</div>
-                 <div className="h-32 bg-black border border-[#303030] rounded p-3 font-mono text-xs text-green-400 overflow-y-auto custom-scrollbar">
-                   {logs.map((L, i) => <div key={i}>{L}</div>)}
+              <div className="flex flex-col">
+                 <div className="text-[11px] uppercase font-bold text-vs-text-muted tracking-widest mb-4">Diagnostic Handshake Log</div>
+                 <div className="flex-1 min-h-[120px] bg-black border border-vs-border rounded-sm p-4 font-mono text-[11px] text-vs-success overflow-y-auto custom-scrollbar shadow-inner leading-relaxed">
+                   {logs.length > 0 ? logs.map((L, i) => (
+                     <div key={i} className="mb-1 animate-in slide-in-from-left-1">{L}</div>
+                   )) : (
+                     <div className="text-vs-text-muted opacity-30 italic">AGENT IDLE: Awaiting initialization sequence...</div>
+                   )}
                  </div>
-               </div>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+            
+            <div className="pt-4 h-16">
+              {status === 'error' && (
+                <div className="flex items-center gap-3 p-4 bg-vs-error/10 border border-vs-error/30 rounded text-vs-error animate-in shake duration-500">
+                  <AlertCircle size={20} />
+                  <div className="text-sm font-medium">Identity Handshake Rejected: The provided setup key does not match this hardware hash in the global registry.</div>
+                </div>
+              )}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#303030]">
-          {(status === 'idle' || status === 'error' || status === 'success') && (
+              {status === 'success' && (
+                <div className="flex items-center gap-3 p-4 bg-vs-success/10 border border-vs-success/30 rounded text-vs-success animate-in slide-in-from-bottom-2">
+                  <CheckCircle size={20} />
+                  <div className="text-sm font-medium tracking-tight">Machine Identity Validated. Persistent mTLS tunnel established. Secure telemetry piping active.</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <footer className="mt-auto pt-8 border-t border-vs-border flex flex-wrap justify-end gap-4">
             <button
               onClick={handleReset}
-              className="px-6 py-2 text-sm bg-[#303030] hover:bg-[#3d3d3d] border border-[#454545] rounded transition-colors"
+              className="px-8 py-2.5 text-sm bg-vs-bg hover:bg-vs-panel border border-vs-border rounded-sm transition-all focus:ring-2 focus:ring-vs-border text-vs-text-muted hover:text-white"
             >
-              Reset Configuration
+              Flush All Identity Buffers
             </button>
-          )}
-          {(status === 'idle' || status === 'error') && (
-             <button
-                onClick={handleActivate}
-                disabled={!licenseKey}
-                className="px-6 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors border border-transparent shadow shadow-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed flex flex-row items-center gap-2"
-             >
-                <Cpu size={14} /> Establish Control Plane Link
-             </button>
-          )}
-        </div>
+            <button
+              onClick={handleActivate}
+              disabled={!licenseKey || status === 'hashing' || status === 'validating' || status === 'success'}
+              className="px-8 py-2.5 text-sm bg-vs-accent hover:bg-vs-accent-hover text-white rounded-sm transition-all border border-transparent shadow shadow-vs-accent/20 disabled:opacity-30 disabled:cursor-not-allowed flex flex-row items-center gap-2 font-semibold active:scale-95"
+            >
+              <Key size={16} /> Negotiate Secure Link
+            </button>
+          </footer>
+        </section>
+
+        <section className="p-6 bg-vs-panel/50 border border-vs-border border-dashed rounded-sm flex items-center gap-6">
+           <div className="w-12 h-12 rounded-full border border-vs-border flex items-center justify-center flex-shrink-0 text-vs-text-muted">
+              <Info size={24} />
+           </div>
+           <div className="text-[13px] text-vs-text-muted leading-relaxed">
+             <strong className="text-white">Notice:</strong> Hardware ID generation is non-reversible and based on localized UEFI/WMI signals. 
+             If you replace your motherboard or CPU, you will need to re-issue a setup token via the Multi-Tenant Control Plane Settings.
+           </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };

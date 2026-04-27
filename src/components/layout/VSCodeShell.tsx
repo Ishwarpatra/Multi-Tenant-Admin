@@ -35,26 +35,32 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
 
       <div className="flex flex-1 overflow-hidden">
          {/* Activity Bar (Leftmost narrow strip) */}
-         <div className="w-12 bg-vs-header border-r border-vs-border flex flex-col items-center py-2 flex-shrink-0 gap-4 z-20">
-            <ActivityIcon id="explorer" icon={<Files size={24} strokeWidth={1.5}/>} active={activeSidebar === 'explorer'} onClick={() => onSidebarChange('explorer')} />
-            <ActivityIcon id="search" icon={<Search size={24} strokeWidth={1.5}/>} active={activeSidebar === 'search'} onClick={() => onSidebarChange('search')} />
-            <ActivityIcon id="source-control" icon={<Code size={24} strokeWidth={1.5}/>} active={activeSidebar === 'source-control'} onClick={() => onSidebarChange('source-control')} />
-            <ActivityIcon id="dashboard" icon={<LayoutGrid size={24} strokeWidth={1.5}/>} active={activeSidebar === 'dashboard'} onClick={() => onSidebarChange('dashboard')} />
+         <nav 
+           aria-label="Activity Bar"
+           className="w-12 bg-vs-header border-r border-vs-border flex flex-col items-center py-2 flex-shrink-0 gap-4 z-20"
+         >
+            <ActivityButton label="Explorer" icon={<Files size={24} strokeWidth={1.5}/>} active={activeSidebar === 'explorer'} onClick={() => onSidebarChange('explorer')} />
+            <ActivityButton label="Search" icon={<Search size={24} strokeWidth={1.5}/>} active={activeSidebar === 'search'} onClick={() => onSidebarChange('search')} />
+            <ActivityButton label="Source Control" icon={<Code size={24} strokeWidth={1.5}/>} active={activeSidebar === 'source-control'} onClick={() => onSidebarChange('source-control')} />
+            <ActivityButton label="Dashboard" icon={<LayoutGrid size={24} strokeWidth={1.5}/>} active={activeSidebar === 'dashboard'} onClick={() => onSidebarChange('dashboard')} />
             
             <div className="mt-auto mb-2 relative">
-               <ActivityIcon id="settings" icon={<Settings size={24} strokeWidth={1.5}/>} active={activeSidebar === 'settings'} onClick={() => onSidebarChange('settings')} />
+               <ActivityButton label="Settings" icon={<Settings size={24} strokeWidth={1.5}/>} active={activeSidebar === 'settings'} onClick={() => onSidebarChange('settings')} />
             </div>
-         </div>
+         </nav>
 
          {/* Primary Sidebar */}
          {sidebarContent && (
-            <div className="w-60 bg-vs-panel border-r border-vs-border flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.2)] flex-shrink-0">
+            <aside 
+              aria-label="Sidebar"
+              className="w-60 md:w-64 lg:w-72 max-w-[40%] bg-vs-panel border-r border-vs-border flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.2)] flex-shrink-0 transition-all duration-300"
+            >
                {sidebarContent}
-            </div>
+            </aside>
          )}
          
          {/* Main Editor Area */}
-         <div className="flex-1 flex flex-col overflow-hidden bg-vs-base">
+         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-vs-base">
             {/* Mock Editor Tabs */}
             <div className="h-9 bg-vs-panel flex flex-shrink-0 relative overflow-x-auto no-scrollbar">
                <div className="px-4 h-full bg-vs-base border-t border-[#007fd4] border-r border-vs-border flex items-center gap-2 text-white min-w-[140px]">
@@ -65,9 +71,9 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
 
             {/* Breadcrumb / Top Header Area inside editor */}
             {headerContent && (
-              <div className="min-h-7 py-1 px-4 border-b border-vs-border/40 flex items-center justify-between flex-wrap text-[11.5px] bg-vs-base text-gray-400 z-10 shrink-0 shadow-sm">
+              <header className="min-h-7 py-1 px-4 border-b border-vs-border/40 flex items-center justify-between flex-wrap text-[11.5px] bg-vs-base text-gray-400 z-10 shrink-0 shadow-sm">
                  {headerContent}
-              </div>
+              </header>
             )}
             
             {/* Actual Content Frame */}
@@ -78,7 +84,7 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
       </div>
 
       {/* VS Code Status Bar */}
-      <div className="h-6 bg-[#007fd4] text-white flex items-center px-3 justify-between text-[11px] font-medium flex-shrink-0 z-30">
+      <footer className="h-6 bg-[#007fd4] text-white flex items-center px-3 justify-between text-[11px] font-medium flex-shrink-0 z-30">
         <div className="flex items-center gap-4">
            <span className="truncate">Multi-Tenant Platform Extension Host Active</span>
            <span className="hidden sm:inline-flex opacity-80 cursor-pointer hover:opacity-100">Telemetry Piped</span>
@@ -88,17 +94,19 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
            <span className="hover:opacity-100 cursor-pointer">React Native/Web</span>
            <span className="hover:opacity-100 cursor-pointer">UTF-8</span>
         </div>
-      </div>
+      </footer>
     </div>
   );
 };
 
-const ActivityIcon = ({icon, active, onClick, id}: {icon: React.ReactNode, active: boolean, onClick: () => void, id: string}) => (
-   <div 
+const ActivityButton = ({icon, active, onClick, label}: {icon: React.ReactNode, active: boolean, onClick: () => void, label: string}) => (
+   <button 
      onClick={onClick}
-     className={`relative w-full flex justify-center py-2 cursor-pointer transition-colors ${active ? 'text-white' : 'text-vs-text-muted hover:text-gray-300'}`}
+     aria-label={label}
+     aria-current={active ? 'page' : undefined}
+     className={`relative w-full flex justify-center py-2 cursor-pointer transition-colors border-none bg-transparent focus:outline-none focus:bg-vs-active/50 ${active ? 'text-white' : 'text-vs-text-muted hover:text-gray-300'}`}
    >
      {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white"></div>}
      {icon}
-   </div>
+   </button>
 );
