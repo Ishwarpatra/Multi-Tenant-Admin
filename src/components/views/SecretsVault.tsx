@@ -1,33 +1,53 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Copy, ShieldAlert, KeyRound, Check, Filter, Download, Plus, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, Copy, ShieldAlert, KeyRound, Check, Filter, Download, Plus, X, AlertCircle, Edit2, Trash2 } from 'lucide-react';
+import { VSCodeSelect } from '../ui/VSCodeSelect';
+import { MockApiService, INITIAL_SECRETS } from '../../services/mockApiService';
 
-interface SecretEntry {
+export interface SecretEntry {
   id: string;
   keyName: string;
   value: string;
   env: 'Production' | 'Staging' | 'Development';
-  lastUpdated: string;
+  timestamp: number;
 }
 
-const INITIAL_SECRETS: SecretEntry[] = [
-  { id: '1', keyName: 'STRIPE_SECRET_KEY', value: 'sk_live_51Nw9x2D...', env: 'Production', lastUpdated: '2 hours ago' },
-  { id: '2', keyName: 'AWS_ACCESS_KEY_ID', value: 'AKIAIOSFODNN7EXAMPLE', env: 'Production', lastUpdated: '3 days ago' },
-  { id: '3', keyName: 'OPENAI_API_KEY', value: 'sk-proj-783...', env: 'Staging', lastUpdated: '1 week ago' },
-  { id: '4', keyName: 'DB_CONNECTION_STRING', value: 'postgresql://admin:...', env: 'Development', lastUpdated: '1 month ago' },
-];
+function getRelativeTime(timestamp: number) {
+   const diff = Math.floor((Date.now() - timestamp) / 1000);
+   if (diff < 60) return `Just now`;
+   if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+   if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+   return `${Math.floor(diff/86400)}d ago`;
+}
 
 export const SecretsVault: React.FC = () => {
-  const [secrets, setSecrets] = useState<SecretEntry[]>(INITIAL_SECRETS);
+  const [secrets, setSecrets] = useState<SecretEntry[]>([]);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All' | 'Production' | 'Staging' | 'Development'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [showInjectModal, setShowInjectModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newValue, setNewValue] = useState('');
   const [newEnv, setNewEnv] = useState<'Production' | 'Staging' | 'Development'>('Development');
+  const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'github' | 'gitlab'>('github');
+  const [copiedPipeline, setCopiedPipeline] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    MockApiService.getSecrets().then(data => {
+      setSecrets(data as SecretEntry[]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (showInjectModal && !editingId) {
+      setNewEnv(filter !== 'All' ? filter : 'Development');
+    }
+  }, [showInjectModal, filter, editingId]);
 
   const toggleReveal = (id: string) => {
     const newRevealed = new Set(revealed);
@@ -39,38 +59,86 @@ export const SecretsVault: React.FC = () => {
     setRevealed(newRevealed);
   };
 
+  const panicMaskAll = () => setRevealed(new Set());
+
   const copyToClipboard = (id: string, value: string) => {
     navigator.clipboard.writeText(value);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const handleKeyNameChange = (val: string) => {
+    // UPPER_SNAKE_CASE sanitization
+    const sanitized = val
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^a-zA-Z0-9_]/g, '') // Strip special characters
+      .toUpperCase();
+    setNewKeyName(sanitized);
+    setErrorStatus(null);
+  };
+
   const handleInject = () => {
     if (!newKeyName || !newValue) return;
-    setSecrets(prev => [...prev, {
-      id: Date.now().toString(),
-      keyName: newKeyName,
-      value: newValue,
-      env: newEnv,
-      lastUpdated: 'Just now'
-    }]);
+
+    // Collision detection
+    if (secrets.some(s => s.keyName === newKeyName && s.env === newEnv && s.id !== editingId)) {
+      setErrorStatus(`DUPLICATE_KEY: ${newKeyName} already exists in ${newEnv}`);
+      return;
+    }
+
+    setSecrets(prev => {
+      if (editingId) {
+        return prev.map(s => s.id === editingId ? { ...s, keyName: newKeyName, value: newValue, env: newEnv, timestamp: Date.now() } : s);
+      }
+      return [{
+        id: Date.now().toString(),
+        keyName: newKeyName,
+        value: newValue,
+        env: newEnv,
+        timestamp: Date.now()
+      }, ...prev];
+    });
     setShowInjectModal(false);
     setNewKeyName('');
     setNewValue('');
     setNewEnv('Development');
+    setEditingId(null);
   };
 
-  const filteredSecrets = secrets.filter(s => filter === 'All' || s.env === filter);
+  const handleEdit = (secret: SecretEntry) => {
+    setNewKeyName(secret.keyName);
+    setNewValue(secret.value);
+    setNewEnv(secret.env);
+    setEditingId(secret.id);
+    setShowInjectModal(true);
+  };
 
-  const generatedYaml = `name: Inject Active Secrets
+  const handleDelete = (id: string) => {
+    setSecrets(prev => prev.filter(s => s.id !== id));
+  };
+
+  const filteredSecrets = secrets.filter(s => {
+    const matchesEnv = filter === 'All' || s.env === filter;
+    const matchesSearch = s.keyName.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesEnv && matchesSearch;
+  });
+
+  const generatedYaml = exportFormat === 'github' ? `name: Inject Active Secrets
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Inject & Mask Values
+      - name: Configure Secure Environment
+        env:${filteredSecrets.map(s => `\n          ${s.keyName}: \${{ secrets.${s.keyName} }}`).join('')}
         run: |${
 filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n          echo "${s.keyName}=$${s.keyName}" >> $GITHUB_ENV`).join('')
         }
+` : `variables:
+${filteredSecrets.map(s => `  ${s.keyName}: "$${s.keyName}" # Masked via Protected flag`).join('\n')}
+
+deploy:
+  script:
+    - echo "Deploying with masked multitenant variables..."
 `;
 
   return (
@@ -85,6 +153,14 @@ filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n        
               Strictly isolated vault for cryptographic keys, billing secrets, and connection strings. Access is logged. Keys are heavily masked by default across all active UI sessions to prevent cross-tenant key leakage during support triage.
             </p>
          </div>
+         {revealed.size > 0 && (
+           <button 
+             onClick={panicMaskAll}
+             className="bg-vs-error hover:bg-red-600 text-white px-4 py-2 rounded-sm text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 border-none cursor-pointer shadow-lg animate-bounce"
+           >
+             <EyeOff size={14} /> Panic: Mask All
+           </button>
+         )}
       </header>
 
       <div className="bg-vs-bg border border-vs-border rounded-sm shadow-xl flex flex-col overflow-hidden">
@@ -95,6 +171,20 @@ filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n        
             </div>
             
             <div className="flex items-center gap-3 flex-wrap">
+               <div className="relative">
+                 <input 
+                   type="text" 
+                   value={searchQuery}
+                   onChange={e => setSearchQuery(e.target.value)}
+                   placeholder="Search keys..." 
+                   className="bg-vs-base border border-vs-border focus:border-vs-accent text-white outline-none rounded-sm px-2 py-1 text-xs w-48 shadow-inner"
+                 />
+                 {searchQuery && (
+                   <button onClick={() => setSearchQuery('')} className="absolute right-1.5 top-1.5 text-gray-400 hover:text-white bg-transparent border-none cursor-pointer">
+                     <X size={12} />
+                   </button>
+                 )}
+               </div>
                <nav className="flex bg-vs-base rounded-sm flex-row border border-vs-border p-1" aria-label="Environment filters">
                   {['All', 'Production', 'Staging', 'Development'].map(env => (
                     <button 
@@ -149,24 +239,37 @@ filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n        
                            {secret.env}
                          </span>
                       </td>
-                      <td className="px-6 py-4 text-vs-text-muted font-mono text-[11px] uppercase">{secret.lastUpdated}</td>
+                      <td className="px-6 py-4 text-vs-text-muted font-mono text-[11px] uppercase">{getRelativeTime(secret.timestamp)}</td>
                       <td className="px-6 py-4 text-right">
-                         <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                         <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button 
                               onClick={() => toggleReveal(secret.id)} 
-                              className="p-1.5 text-gray-400 hover:text-white hover:bg-vs-active rounded-sm border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-vs-accent"
+                              className="p-1 text-gray-400 hover:text-white hover:bg-vs-active rounded-sm border-none cursor-pointer"
                               title={isRevealed ? "Mask secret" : "Reveal secret"}
-                              aria-label={isRevealed ? "Mask secret" : "Reveal secret"}
                             >
-                              {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                              {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
                             <button 
                               onClick={() => copyToClipboard(secret.id, secret.value)} 
-                              className="p-1.5 text-gray-400 hover:text-white hover:bg-vs-active rounded-sm border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-vs-accent"
+                              className="p-1 text-gray-400 hover:text-white hover:bg-vs-active rounded-sm border-none cursor-pointer"
                               title="Copy to clipboard"
-                              aria-label="Copy to clipboard"
                             >
-                              {isCopied ? <Check size={16} className="text-vs-success" /> : <Copy size={16} />}
+                              {isCopied ? <Check size={14} className="text-vs-success" /> : <Copy size={14} />}
+                            </button>
+                            <div className="w-[1px] h-4 bg-vs-border mx-1"></div>
+                            <button 
+                              onClick={() => handleEdit(secret)} 
+                              className="p-1 text-gray-400 hover:text-blue-400 hover:bg-vs-active rounded-sm border-none cursor-pointer"
+                              title="Edit Secret"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(secret.id)} 
+                              className="p-1 text-gray-400 hover:text-vs-error hover:bg-vs-active rounded-sm border-none cursor-pointer"
+                              title="Delete Secret"
+                            >
+                              <Trash2 size={14} />
                             </button>
                          </div>
                       </td>
@@ -197,21 +300,23 @@ filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n        
                  <button onClick={() => setShowInjectModal(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>
                </div>
                <div className="p-4 space-y-4">
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Key Name</label>
-                    <input value={newKeyName} onChange={e=>setNewKeyName(e.target.value)} placeholder="e.g. AWS_ACCESS_KEY" className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent font-mono" />
+                  <div className="flex flex-col gap-1">
+                    <label className="block text-xs text-gray-400 mb-1">Key Name (Sanitized)</label>
+                    <input value={newKeyName} onChange={e=>handleKeyNameChange(e.target.value)} placeholder="e.g. AWS_ACCESS_KEY" className="w-full bg-vs-base border border-vs-border p-2 text-sm text-vs-accent rounded outline-none focus:border-vs-accent font-mono" />
                   </div>
+                  {errorStatus && <p className="text-vs-error text-[10px] font-bold flex items-center gap-1"><AlertCircle size={10}/> {errorStatus}</p>}
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Value</label>
                     <input type="password" value={newValue} onChange={e=>setNewValue(e.target.value)} placeholder="Secret value..." className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent font-mono" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Environment Scope</label>
-                    <select value={newEnv} onChange={e=>setNewEnv(e.target.value as any)} className="w-full bg-vs-base border border-vs-border p-2 text-sm text-white rounded outline-none focus:border-vs-accent">
-                      <option value="Development">Development</option>
-                      <option value="Staging">Staging</option>
-                      <option value="Production">Production</option>
-                    </select>
+                    <VSCodeSelect 
+                      value={newEnv} 
+                      options={['Development', 'Staging', 'Production']} 
+                      onChange={(v) => setNewEnv(v as any)} 
+                      className="w-full"
+                    />
                   </div>
                </div>
                <div className="p-4 border-t border-vs-border flex justify-end gap-2 bg-vs-bg">
@@ -226,18 +331,45 @@ filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n        
          <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
             <div className="bg-vs-panel border border-vs-border rounded shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden">
                <div className="px-4 py-3 border-b border-vs-border flex justify-between items-center bg-vs-header">
-                 <h2 className="text-white text-sm font-medium">Export CI/CD Pipeline (GitHub Actions)</h2>
+                 <h2 className="text-white text-sm font-medium">Export Infrastructure Payload</h2>
                  <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-white"><X size={16}/></button>
                </div>
                <div className="p-4">
-                  <p className="text-xs text-gray-400 mb-4">
-                    The block below uses <code className="text-gray-300">::add-mask::</code> to ensure that secrets injected into the CI environment 
-                    are never accidentally leaked in pipeline logs.
+                  <div className="flex gap-2 mb-4 p-1 bg-vs-base border border-vs-border rounded-sm w-fit">
+                    <button onClick={() => setExportFormat('github')} className={`px-4 py-1 text-[10px] font-bold uppercase rounded-sm border-none cursor-pointer ${exportFormat === 'github' ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:text-white'}`}>GitHub</button>
+                    <button onClick={() => setExportFormat('gitlab')} className={`px-4 py-1 text-[10px] font-bold uppercase rounded-sm border-none cursor-pointer ${exportFormat === 'gitlab' ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:text-white'}`}>GitLab CI</button>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4 italic opacity-80">
+                    The {exportFormat === 'github' ? 'GitHub Actions' : 'GitLab CI'} block below ensures that tokens are strictly redacted from logs.
                   </p>
-                  <textarea readOnly value={generatedYaml} className="w-full h-64 bg-black border border-vs-border p-3 text-xs text-green-400 rounded outline-none font-mono resize-none" />
+                  <textarea readOnly value={generatedYaml} className="w-full h-64 bg-black border border-vs-border p-3 text-xs text-vs-success rounded outline-none font-mono resize-none leading-relaxed" />
                </div>
                <div className="p-4 border-t border-vs-border flex justify-end bg-vs-bg">
-                 <button onClick={() => navigator.clipboard.writeText(generatedYaml)} className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded flex items-center gap-1 border border-transparent shadow-sm"><Copy size={14}/> Copy Pipeline YAML</button>
+                 <button 
+                   onClick={() => {
+                     const blob = new Blob([generatedYaml], { type: 'text/yaml' });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = '.github/workflows/secret-sync.yml';
+                     a.click();
+                     URL.revokeObjectURL(url);
+                   }} 
+                   className="px-4 py-1.5 text-xs bg-vs-base hover:bg-vs-hover text-white rounded flex items-center gap-1 border border-vs-border shadow-sm cursor-pointer"
+                 >
+                   <Download size={14}/> Download .yml
+                 </button>
+                 <button 
+                   onClick={() => {
+                     navigator.clipboard.writeText(generatedYaml);
+                     setCopiedPipeline(true);
+                     setTimeout(() => setCopiedPipeline(false), 2000);
+                   }} 
+                   className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded flex items-center gap-1 border border-transparent shadow-sm cursor-pointer"
+                 >
+                   {copiedPipeline ? <Check size={14} className="text-white" /> : <Copy size={14}/>} 
+                   {copiedPipeline ? 'Copied!' : 'Copy Pipeline YAML'}
+                 </button>
                </div>
             </div>
          </div>

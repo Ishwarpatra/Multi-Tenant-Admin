@@ -10,6 +10,8 @@ interface VSCodeShellProps {
   headerContent?: React.ReactNode;
 }
 
+import { useApp } from '../../context/AppContext';
+
 export const VSCodeShell: React.FC<VSCodeShellProps> = ({ 
   children, 
   activeSidebar, 
@@ -18,6 +20,9 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
   topBarTitle = "Control Plane Dashboard",
   headerContent
 }) => {
+  const { notifications } = useApp();
+  const hasAlerts = notifications.length > 0;
+
   return (
     <div className="bg-vs-base min-h-screen flex flex-col font-sans text-vs-text overflow-hidden selection:bg-blue-500/30">
       
@@ -35,19 +40,25 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
 
       <div className="flex flex-1 overflow-hidden">
          {/* Activity Bar (Leftmost narrow strip) */}
-         <nav 
-           aria-label="Activity Bar"
-           className="w-12 bg-vs-header border-r border-vs-border flex flex-col items-center py-2 flex-shrink-0 gap-4 z-20"
-         >
-            <ActivityButton label="Explorer" icon={<Files size={24} strokeWidth={1.5}/>} active={activeSidebar === 'explorer'} onClick={() => onSidebarChange('explorer')} />
-            <ActivityButton label="Search" icon={<Search size={24} strokeWidth={1.5}/>} active={activeSidebar === 'search'} onClick={() => onSidebarChange('search')} />
-            <ActivityButton label="Source Control" icon={<Code size={24} strokeWidth={1.5}/>} active={activeSidebar === 'source-control'} onClick={() => onSidebarChange('source-control')} />
-            <ActivityButton label="Dashboard" icon={<LayoutGrid size={24} strokeWidth={1.5}/>} active={activeSidebar === 'dashboard'} onClick={() => onSidebarChange('dashboard')} />
-            
-            <div className="mt-auto mb-2 relative">
-               <ActivityButton label="Settings" icon={<Settings size={24} strokeWidth={1.5}/>} active={activeSidebar === 'settings'} onClick={() => onSidebarChange('settings')} />
-            </div>
-         </nav>
+          <nav 
+            aria-label="Activity Bar"
+            className="w-12 bg-vs-header border-r border-vs-border flex flex-col items-center py-2 flex-shrink-0 gap-4 z-20"
+          >
+             <ActivityButton label="Explorer" icon={<Files size={24} strokeWidth={1.5}/>} active={activeSidebar === 'explorer'} onClick={() => onSidebarChange('explorer')} />
+             <ActivityButton label="Search" icon={<Search size={24} strokeWidth={1.5}/>} active={activeSidebar === 'search'} onClick={() => onSidebarChange('search')} />
+             <ActivityButton label="Source Control" icon={<Code size={24} strokeWidth={1.5}/>} active={activeSidebar === 'source-control'} onClick={() => onSidebarChange('source-control')} />
+             <ActivityButton label="Dashboard" icon={<LayoutGrid size={24} strokeWidth={1.5}/>} active={activeSidebar === 'dashboard'} onClick={() => onSidebarChange('dashboard')} />
+             
+             <div className="mt-auto mb-2 relative">
+                <ActivityButton 
+                  label="Settings" 
+                  icon={<Settings size={24} strokeWidth={1.5}/>} 
+                  active={activeSidebar === 'settings'} 
+                  onClick={() => onSidebarChange('settings')} 
+                  hasAlert={hasAlerts}
+                />
+             </div>
+          </nav>
 
          {/* Primary Sidebar */}
          {sidebarContent && (
@@ -99,7 +110,7 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
   );
 };
 
-const ActivityButton = ({icon, active, onClick, label}: {icon: React.ReactNode, active: boolean, onClick: () => void, label: string}) => (
+const ActivityButton = ({icon, active, onClick, label, hasAlert}: {icon: React.ReactNode, active: boolean, onClick: () => void, label: string, hasAlert?: boolean}) => (
    <button 
      onClick={onClick}
      aria-label={label}
@@ -108,5 +119,8 @@ const ActivityButton = ({icon, active, onClick, label}: {icon: React.ReactNode, 
    >
      {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white"></div>}
      {icon}
+     {hasAlert && (
+       <span className="absolute top-2 right-2 w-2 h-2 bg-vs-error rounded-full border border-vs-bg" />
+     )}
    </button>
 );

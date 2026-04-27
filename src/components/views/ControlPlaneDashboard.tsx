@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Shield, Server, ShieldAlert, Code2, Search, Settings } from 'lucide-react';
+import { 
+  Files, Search, Code, Code2, LayoutGrid, Settings, 
+  Database, Activity, Shield, ShieldAlert, Key, Bell, X, Info, AlertTriangle, CheckCircle, Server 
+} from 'lucide-react';
 import { VSCodeShell } from '../layout/VSCodeShell';
 import { HardwareMonitoring } from './HardwareMonitoring';
 import { CoreInfrastructure } from './CoreInfrastructure';
 import { SecretsVault } from './SecretsVault';
 import { LocalEnvManager } from './LocalEnvManager';
 import { SettingsView } from './SettingsView';
+import { useApp } from '../../context/AppContext';
 
 interface DashboardProps {
   view: string;
@@ -13,8 +17,10 @@ interface DashboardProps {
 }
 
 export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewChange }) => {
+  const { notifications, dismissNotification } = useApp();
   const [activeSidebar, setActiveSidebar] = useState<string>('explorer');
   const [activeTab, setActiveTab] = useState('hardware');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
@@ -109,20 +115,91 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
       sidebarContent={getSidebarContent()}
       topBarTitle={currentTabName}
       headerContent={
-        <div className="flex items-center text-vs-text-muted gap-1">
-           <span className="hover:text-white cursor-pointer px-1">src</span>
-           <span className="opacity-50">❯</span>
-           <span className="hover:text-white cursor-pointer px-1">views</span>
-           <span className="opacity-50">❯</span>
-           <span className="hover:text-white cursor-pointer px-1 text-blue-400">{currentTabName}.tsx</span>
+        <div className="flex items-center gap-4 w-full">
+           <div className="flex items-center gap-1">
+             <span className="text-vs-text-muted tracking-tight text-[11px]">app</span>
+             <span className="text-vs-text-muted">/</span>
+             <span className="text-vs-text">{currentTabName.toLowerCase().replace(/\s+/g, '-')}</span>
+           </div>
+           
+           <div className="ml-auto flex items-center gap-3">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative p-1 rounded-sm transition-colors border-none bg-transparent cursor-pointer hover:bg-vs-active ${showNotifications ? 'text-vs-accent bg-vs-active' : 'text-vs-text-muted'}`}
+                aria-label="Notifications"
+              >
+                 <Bell size={16} />
+                 {notifications.length > 0 && (
+                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-vs-error text-white text-[9px] flex items-center justify-center rounded-full border border-vs-base font-bold">
+                     {notifications.length}
+                   </span>
+                 )}
+              </button>
+           </div>
         </div>
       }
     >
-      <div className={activeTab === 'infrastructure' ? 'block h-full' : 'hidden'}><CoreInfrastructure onOpenSettings={() => setActiveTab('settings')} /></div>
-      <div className={activeTab === 'hardware' ? 'block h-full' : 'hidden'}><HardwareMonitoring /></div>
-      <div className={activeTab === 'secrets' ? 'block h-full' : 'hidden'}><SecretsVault /></div>
-      <div className={activeTab === 'localenv' ? 'block h-full' : 'hidden'}><LocalEnvManager /></div>
-      <div className={activeTab === 'settings' ? 'block h-full' : 'hidden'}><SettingsView /></div>
+      <div className="relative h-full w-full overflow-hidden">
+        <div className={activeTab === 'infrastructure' ? 'block h-full' : 'hidden'}><CoreInfrastructure onOpenSettings={() => setActiveTab('settings')} /></div>
+        <div className={activeTab === 'hardware' ? 'block h-full' : 'hidden'}><HardwareMonitoring /></div>
+        <div className={activeTab === 'secrets' ? 'block h-full' : 'hidden'}><SecretsVault /></div>
+        <div className={activeTab === 'localenv' ? 'block h-full' : 'hidden'}><LocalEnvManager /></div>
+        <div className={activeTab === 'settings' ? 'block h-full' : 'hidden'}><SettingsView /></div>
+
+        {/* Notification Panel Overlay */}
+        {showNotifications && (
+          <div className="absolute top-0 right-0 w-80 h-full bg-vs-bg border-l border-vs-border z-[100] shadow-2xl flex flex-col animate-in slide-in-from-right-4 duration-300">
+             <header className="px-4 py-3 border-b border-vs-border flex items-center justify-between bg-vs-panel">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-vs-text-muted">Notification Center</span>
+                <button onClick={() => setShowNotifications(false)} className="text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer">
+                  <X size={16} />
+                </button>
+             </header>
+             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                {notifications.length > 0 ? notifications.map(n => (
+                  <div key={n.id} className={`p-3 rounded-sm border-l-2 bg-vs-panel shadow-sm animate-in slide-in-from-right-2 duration-300 relative group
+                    ${n.type === 'error' ? 'border-vs-error' : n.type === 'warn' ? 'border-orange-500' : n.type === 'success' ? 'border-vs-success' : 'border-vs-accent'}
+                  `}>
+                    <button 
+                      onClick={() => dismissNotification(n.id)}
+                      className="absolute top-2 right-2 p-1 text-vs-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {n.type === 'error' && <AlertTriangle size={14} className="text-vs-error" />}
+                        {n.type === 'warn' && <AlertTriangle size={14} className="text-orange-500" />}
+                        {n.type === 'success' && <CheckCircle size={14} className="text-vs-success" />}
+                        {n.type === 'info' && <Info size={14} className="text-vs-accent" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <div className="text-[12px] font-bold text-white truncate">{n.title}</div>
+                         <div className="text-[11px] text-vs-text-muted mt-1 leading-relaxed">{n.message}</div>
+                         <div className="text-[9px] text-vs-text-muted mt-2 opacity-50 font-mono italic">{n.timestamp.toLocaleTimeString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="h-full flex flex-col items-center justify-center text-vs-text-muted opacity-30 mt-20">
+                    <Bell size={40} strokeWidth={1} />
+                    <span className="text-[11px] uppercase tracking-widest mt-4">No unread alerts</span>
+                  </div>
+                )}
+             </div>
+             {notifications.length > 0 && (
+               <footer className="p-2 border-t border-vs-border bg-vs-panel">
+                 <button 
+                   onClick={() => notifications.forEach(n => dismissNotification(n.id))}
+                   className="w-full py-1.5 text-[10px] font-bold uppercase tracking-widest text-vs-text-muted hover:text-white hover:bg-vs-active rounded-sm transition-all border-none bg-transparent cursor-pointer"
+                 >
+                   Clear All History
+                 </button>
+               </footer>
+             )}
+          </div>
+        )}
+      </div>
     </VSCodeShell>
   );
 };

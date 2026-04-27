@@ -1,79 +1,133 @@
 import React, { useState } from 'react';
-import { Settings, Search } from 'lucide-react';
+import { Settings, Search, Check, ChevronDown } from 'lucide-react';
+import { useApp, Theme } from '../../context/AppContext';
+import { VSCodeSelect } from '../ui/VSCodeSelect';
 
 export const SettingsView: React.FC = () => {
+  const { settings, updateSettings } = useApp();
   const [search, setSearch] = useState('');
-  const [theme, setTheme] = useState('Dark (Visual Studio Code)');
-  const [autosave, setAutosave] = useState('afterDelay');
-  const [fontSize, setFontSize] = useState('14');
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   
-  return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] text-[#cccccc] font-sans">
-      <div className="px-6 py-4 border-b border-[#3c3c3c] bg-[#252526] flex items-center justify-between">
+  const settingRows = [
+    {
+      id: 'font-size',
+      category: 'Commonly Used',
+      label: 'Editor: Font Size',
+      description: 'Controls the font size in pixels across the entire application interface.',
+      control: (
+        <input 
+          type="number" 
+          value={settings.fontSize}
+          onChange={e => updateSettings({ fontSize: parseInt(e.target.value) || 12 })}
+          className="bg-vs-bg border border-vs-border focus:border-vs-accent text-vs-text px-2 py-1 text-sm outline-none w-32 rounded-sm"
+        />
+      )
+    },
+    {
+      id: 'auto-save',
+      category: 'Commonly Used',
+      label: 'Files: Auto Save',
+      description: 'Controls auto save of dirty editors. Choose afterDelay to save changes automatically.',
+      control: (
+        <VSCodeSelect 
+          value={settings.autosave} 
+          options={['off', 'afterDelay', 'onFocusChange', 'onWindowChange']} 
+          onChange={(val) => updateSettings({ autosave: val as any })}
+        />
+      )
+    },
+    {
+      id: 'color-theme',
+      category: 'Workbench',
+      label: 'Workbench: Color Theme',
+      description: 'Specifies the color theme used in the workbench. High Contrast mode is optimized for accessibility.',
+      control: (
+        <VSCodeSelect 
+          value={settings.theme} 
+          options={['dark', 'light', 'hc']} 
+          labels={{ dark: 'Dark (Visual Studio)', light: 'Light (Visual Studio)', hc: 'High Contrast' }}
+          onChange={(val) => updateSettings({ theme: val as Theme })}
+        />
+      )
+    },
+    {
+      id: 'telemetry',
+      category: 'Security',
+      label: 'Telemetry: Enable Heartbeat',
+      description: 'Determines if health metrics from peripheral nodes are aggregated into the Control Plane.',
+      control: (
         <div className="flex items-center gap-2">
-          <Settings size={18} className="text-[#007fd4]" />
+          <input 
+            id="telemetry-check"
+            type="checkbox" 
+            checked={settings.telemetryEnabled}
+            onChange={e => updateSettings({ telemetryEnabled: e.target.checked })}
+            className="w-4 h-4 cursor-pointer"
+          />
+          <label htmlFor="telemetry-check" className="text-vs-text-muted text-xs">Enabled</label>
+        </div>
+      )
+    }
+  ];
+
+  const filteredRows = settingRows.filter(row => 
+    row.label.toLowerCase().includes(search.toLowerCase()) || 
+    row.description.toLowerCase().includes(search.toLowerCase()) ||
+    row.category.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col h-full bg-vs-base text-vs-text font-sans animate-in fade-in duration-300">
+      <header className="px-6 py-4 border-b border-vs-border bg-vs-bg flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Settings size={18} className="text-vs-accent" />
           <h2 className="text-white text-[15px] font-medium tracking-tight">Settings</h2>
         </div>
         <div className="w-64 relative">
-           <Search size={14} className="absolute left-2.5 top-2 text-gray-500" />
+           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-vs-text-muted" />
            <input 
              value={search}
              onChange={e => setSearch(e.target.value)}
-             placeholder="Search settings" 
-             className="w-full bg-[#3c3c3c] border border-transparent focus:border-[#007fd4] text-white px-8 py-1.5 text-xs outline-none"
+             placeholder="Search settings (e.g. 'theme' or 'font')" 
+             className="w-full bg-vs-active border border-vs-border focus:border-vs-accent text-white px-8 py-1.5 text-xs outline-none rounded-sm transition-all shadow-inner"
            />
         </div>
-      </div>
+      </header>
       
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-        <div className="max-w-3xl space-y-8">
-          <section>
-            <h3 className="text-sm font-semibold text-white mb-4 border-b border-[#3c3c3c] pb-2">Commonly Used</h3>
-            
-            <div className="space-y-6">
-              <div className="flex flex-col gap-1">
-                <label className="text-[13px] font-medium text-[#e7e7e7]">Editor: Font Size</label>
-                <div className="text-[12px] text-gray-400 mb-1">Controls the font size in pixels.</div>
-                <input 
-                  type="number" 
-                  value={fontSize}
-                  onChange={e => setFontSize(e.target.value)}
-                  className="bg-[#3c3c3c] border border-transparent focus:border-[#007fd4] text-white px-2 py-1 text-sm outline-none w-32"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[13px] font-medium text-[#e7e7e7]">Files: Auto Save</label>
-                <div className="text-[12px] text-gray-400 mb-1">Controls auto save of dirty editors. Read more about auto save.</div>
-                <select 
-                  value={autosave}
-                  onChange={e => setAutosave(e.target.value)}
-                  className="bg-[#3c3c3c] border border-transparent focus:border-[#007fd4] text-white px-2 py-1 text-sm outline-none w-48"
-                >
-                  <option value="off">off</option>
-                  <option value="afterDelay">afterDelay</option>
-                  <option value="onFocusChange">onFocusChange</option>
-                  <option value="onWindowChange">onWindowChange</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[13px] font-medium text-[#e7e7e7]">Workbench: Color Theme</label>
-                <div className="text-[12px] text-gray-400 mb-1">Specifies the color theme used in the workbench.</div>
-                <select 
-                  value={theme}
-                  onChange={e => setTheme(e.target.value)}
-                  className="bg-[#3c3c3c] border border-transparent focus:border-[#007fd4] text-white px-2 py-1 text-sm outline-none w-64"
-                >
-                  <option value="Dark (Visual Studio Code)">Dark (Visual Studio Code)</option>
-                  <option value="Light (Visual Studio Code)">Light (Visual Studio Code)</option>
-                  <option value="High Contrast">High Contrast</option>
-                </select>
-              </div>
+      <main className="flex-1 overflow-y-auto custom-scrollbar p-8">
+        <div className="max-w-4xl space-y-12">
+          {filteredRows.length > 0 ? (
+            <div className="space-y-10">
+              {Array.from(new Set(filteredRows.map(r => r.category))).map(cat => (
+                <section key={cat}>
+                  <h3 className="text-[11px] font-bold text-white mb-6 border-b border-vs-border pb-2 uppercase tracking-widest opacity-60">{cat}</h3>
+                  <div className="space-y-8 pl-4">
+                    {filteredRows.filter(r => r.category === cat).map(row => (
+                      <div key={row.id} className="flex flex-col gap-1 max-w-2xl animate-in slide-in-from-left-2 duration-300">
+                        <label className="text-[13px] font-semibold text-vs-text">{row.label}</label>
+                        <p className="text-[12px] text-vs-text-muted mb-3 leading-relaxed">{row.description}</p>
+                        {row.control}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
-          </section>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-20 text-vs-text-muted">
+              <Search size={40} className="mb-4 opacity-20" />
+              <p className="text-sm font-medium">No settings found matching "{search}"</p>
+              <button 
+                onClick={() => setSearch('')}
+                className="mt-4 text-vs-accent hover:underline text-xs bg-transparent border-none cursor-pointer"
+              >
+                Clear search filter
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
+

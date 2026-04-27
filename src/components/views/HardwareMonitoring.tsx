@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { AlertCircle, Monitor, Loader2, Info } from 'lucide-react';
 
+import { MockApiService } from '../../services/mockApiService';
+
 interface NodeData {
+  id?: string;
   hw: string;
   tenant: string;
   region: string;
@@ -11,69 +15,96 @@ interface NodeData {
   isCritical: boolean;
   capacity: number;
   throughput: string;
+  throughputInt?: number;
   heartbeat: string;
 }
 
-const INITIAL_NODES: NodeData[] = [
-  { hw: '8F3A-99B2-C711', tenant: 'Acme Corp', region: 'US-East', isOnline: true, isWarning: false, isCritical: false, capacity: 42, throughput: '42 env/s', heartbeat: '< 1s ago' },
-  { hw: '77X2-11A0-BB90', tenant: 'Stark Industries', region: 'EU-Central', isOnline: true, isWarning: false, isCritical: false, capacity: 5, throughput: '0 env/s', heartbeat: '12s ago' },
-  { hw: '99Q1-88B2-DF34', tenant: 'Wayne Enterprises', region: 'US-East', isOnline: false, isWarning: true, isCritical: true, capacity: 85, throughput: '18 env/s', heartbeat: '2s ago' },
-  { hw: '44A1-22C9-EE11', tenant: 'Cyberdyne Systems', region: 'US-East', isOnline: false, isWarning: false, isCritical: false, capacity: 0, throughput: '---', heartbeat: '4 days ago' },
-  { hw: '11B0-55C4-XZ92', tenant: 'Acme Corp', region: 'EU-Central', isOnline: true, isWarning: false, isCritical: true, capacity: 92, throughput: '125 env/s', heartbeat: '< 1s ago' },
-];
-
 export const HardwareMonitoring: React.FC = () => {
+  const { addNotification, settings } = useApp();
   const [filterRegion, setFilterRegion] = useState<string>('All Regions');
   const [filterCriticalOnly, setFilterCriticalOnly] = useState(false);
   
-  const [nodes, setNodes] = useState<NodeData[]>(INITIAL_NODES);
+  const [nodes, setNodes] = useState<NodeData[]>([]);
   const [isErrorState, setIsErrorState] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const [throughputData, setThroughputData] = useState(Array.from({length: 40}).map((_, i) => ({
-    time: `${40 - i}s ago`,
-    reqs: Math.floor(Math.random() * 200) + 1500 + Math.sin(i / 3) * 500
+  const [throughputData, setThroughputData] = useState<{time: string, reqs: number}[]>(Array.from({length: 40}).map((_, i) => ({
+    time: '',
+    reqs: 0
   })));
 
   const totalReqsStr = throughputData[throughputData.length - 1].reqs.toLocaleString();
 
   useEffect(() => {
-    if (isErrorState || isSeeding) return;
+    MockApiService.getTelemetryNodes().then((data) => {
+      // mapping INITIAL_NODES structure slightly to merge hw/id if needed, but we can trust the API schema
+      setNodes(data as any);
+      setIsLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isErrorState || isSeeding || !settings.telemetryEnabled || nodes.length === 0) return;
 
     const interval = setInterval(() => {
-      // Update Sparkline
-      setThroughputData(prev => {
-        const newData = [...prev.slice(1)];
-        const lastVal = newData[newData.length - 1].reqs;
-        const jump = (Math.random() - 0.5) * 400;
-        newData.push({
-          time: 'now',
-          reqs: Math.max(800, Math.min(3000, Math.floor(lastVal + jump)))
-        });
-        return newData;
-      });
+      let criticalFound = false;
+      let totalThroughputVal = 0;
 
       // Update Nodes
-      setNodes(prev => prev.map(n => {
-        if (!n.isOnline && !n.isWarning) return n;
-        
-        const capacityJump = (Math.random() - 0.5) * 10;
-        const newCap = Math.max(0, Math.min(100, Math.floor(n.capacity + capacityJump)));
-        const newThroughput = n.isOnline ? `${Math.floor(Math.random() * 100 + (newCap * 2))} env/s` : n.throughput;
-        
-        return {
-          ...n,
-          capacity: newCap,
-          throughput: newThroughput,
-          heartbeat: n.isOnline ? '< 1s ago' : n.heartbeat,
-          isCritical: newCap > 85
-        };
-      }));
+      setNodes(prev => {
+        const updated = prev.map(n => {
+          if (!n.isOnline) return n;
+          
+          // Smoothing algorithm for capacity drift
+          const target = n.isCritical ? 92 : (n.isWarning ? 80 : 30);
+          const drift = (target - n.capacity) * 0.1 + (Math.random() - 0.5) * 5;
+          const newCap = Math.max(0, Math.min(100, Math.floor(n.capacity + drift)));
+          
+          const tpInt = Math.floor(200 + (newCap * 1.5) + Math.sin(Date.now() / 1000) * 20);
+          const newThroughput = `${tpInt} env/s`;
+          
+          const nowCritical = newCap >= 85;
+          const nowWarning = newCap >= 75 && newCap < 85;
+          
+          if (nowCritical && !n.isCritical) criticalFound = true;
+          totalThroughputVal += tpInt;
+
+          return {
+            ...n,
+            capacity: newCap,
+            throughput: newThroughput,
+            throughputInt: tpInt,
+            heartbeat: '< 1s ago',
+            isWarning: nowWarning,
+            isCritical: nowCritical,
+            status: nowCritical ? 'Critical' : (nowWarning ? 'High Latency' : 'Online')
+          };
+        });
+
+        // Update Sparkline synchronously with node data
+        setThroughputData(prevChart => {
+          const newData = [...prevChart.slice(1)];
+          newData.push({
+            time: new Date().toLocaleTimeString('en-US', { hour12: false, minute: '2-digit', second: '2-digit' }),
+            reqs: Math.floor(totalThroughputVal)
+          });
+          return newData;
+        });
+
+        return updated;
+      });
+
+      if (criticalFound) {
+        addNotification({
+          type: 'warn',
+          title: 'Infrastructure Threshold Breached',
+          message: 'An edge node has exceeded 85% capacity. Autoscaling ingress buffer.'
+        });
+      }
     }, 1500);
     return () => clearInterval(interval);
-  }, [isErrorState, isSeeding]);
-
-  const criticalCount = nodes.filter(n => n.isCritical).length;
+  }, [isErrorState, isSeeding, settings.telemetryEnabled, addNotification]);
 
   const filteredNodes = nodes.filter(n => {
     if (filterRegion !== 'All Regions' && n.region !== filterRegion) return false;
@@ -81,13 +112,19 @@ export const HardwareMonitoring: React.FC = () => {
     return true;
   });
 
+  const criticalCount = filteredNodes.filter(n => n.isCritical).length;
+  // Defensive math for dial calculation (prevent divide by zero)
+  const dialOffset = 175 - (criticalCount / (filteredNodes.length || 1) * 175);
+  
+  const regionOptions = ['All Regions', ...Array.from(new Set(nodes.map(n => n.region)))];
+
   const handleRetry = () => {
     setIsSeeding(true);
     setIsErrorState(false);
-    setTimeout(() => {
+    MockApiService.getTelemetryNodes().then(data => {
+      setNodes(data as any);
       setIsSeeding(false);
-      setNodes(INITIAL_NODES);
-    }, 2000);
+    });
   };
 
   const EmptyState = ({ title, message, icon: Icon }: { title: string, message: string, icon: any }) => (
@@ -196,7 +233,7 @@ export const HardwareMonitoring: React.FC = () => {
               <div className="flex items-center gap-4 mt-3">
                 <div className="w-16 h-16 rounded-full border-4 border-vs-border flex items-center justify-center relative">
                   <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                    <circle cx="28" cy="28" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-vs-error opacity-100 transition-all duration-500" strokeDasharray="175" strokeDashoffset={175 - (criticalCount / nodes.length * 175)} />
+                    <circle cx="28" cy="28" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-vs-error opacity-100 transition-all duration-500" strokeDasharray="175" strokeDashoffset={175 - (criticalCount / (nodes.length || 1) * 175)} />
                   </svg>
                   <span className="text-xl font-light text-vs-error">{criticalCount}</span>
                 </div>
@@ -215,7 +252,7 @@ export const HardwareMonitoring: React.FC = () => {
             <div className="px-6 py-4 border-b border-vs-border flex justify-between items-center bg-vs-panel flex-wrap gap-4">
               <h2 className="text-white text-[14px] font-medium tracking-tight">Active Hardware Ingress Logs</h2>
               <div className="flex bg-vs-base rounded-sm flex-row border border-vs-border p-1 text-[11px]" role="group" aria-label="Region filters">
-                {['All Regions', 'US-East', 'EU-Central'].map(r => (
+                {regionOptions.map(r => (
                    <button 
                      key={r}
                      onClick={() => setFilterRegion(r)}
@@ -228,7 +265,7 @@ export const HardwareMonitoring: React.FC = () => {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full custom-scrollbar pb-2 shadow-[inset_-10px_0_10px_-10px_rgba(0,0,0,0.5)]">
               <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="border-b border-vs-border bg-vs-base text-[11px] text-gray-500 uppercase tracking-wider">
@@ -240,10 +277,13 @@ export const HardwareMonitoring: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="text-[12px]">
-                    {filteredNodes.map(node => (
-                       <NodeRow key={node.hw} {...node} />
-                    ))}
-                    {filteredNodes.length === 0 && (
+                    {isLoading ? (
+                      <tr><td colSpan={5} className="px-6 py-20 text-center"><Loader2 size={32} className="animate-spin text-vs-accent mx-auto" /><p className="mt-4 text-vs-text-muted text-xs uppercase tracking-widest">Establishing Control Plane link...</p></td></tr>
+                    ) : filteredNodes.length > 0 ? (
+                      filteredNodes.map(node => (
+                        <NodeRow key={node.hw || node.id} {...node} />
+                      ))
+                    ) : (
                       <tr><td colSpan={5} className="px-6 py-12 text-center text-vs-text-muted italic bg-vs-panel/20">No nodes match the selected region or health filter.</td></tr>
                     )}
                   </tbody>

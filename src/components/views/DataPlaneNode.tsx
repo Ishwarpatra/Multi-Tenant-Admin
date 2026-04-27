@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Cpu, Key, AlertCircle, CheckCircle, Loader2, ShieldAlert, Info } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 export const DataPlaneNode: React.FC = () => {
+  const { addNotification } = useApp();
   const [status, setStatus] = useState<'idle' | 'hashing' | 'validating' | 'error' | 'success'>('idle');
   const [licenseKey, setLicenseKey] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
@@ -10,18 +12,47 @@ export const DataPlaneNode: React.FC = () => {
   const [hashedId, setHashedId] = useState<string | null>(null);
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  const cleanup = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return cleanup;
   }, []);
 
   const appendLog = (msg: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
+  const sleep = (ms: number, signal: AbortSignal) => {
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(resolve, ms);
+      signal.addEventListener('abort', () => {
+        clearTimeout(timeout);
+        reject(new Error('Aborted'));
+      }, { once: true });
+    });
+  };
+
   const handleActivate = () => {
+    if (!licenseKey) return;
+    
+    cleanup();
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     setStatus('hashing');
     setLogs([]);
     setRawMbId(null);
@@ -29,37 +60,68 @@ export const DataPlaneNode: React.FC = () => {
     setHashedId(null);
     
     appendLog('Executing WMI query: SELECT * FROM Win32_BaseBoard...');
-    timeoutRef.current = setTimeout(() => {
-      setRawMbId('BaseBoard_X99_A221');
-      appendLog('Found Motherboard ID: BaseBoard_X99_A221');
-      appendLog('Executing WMI query for Processor ID...');
-      
-      timeoutRef.current = setTimeout(() => {
-        setRawCpuId('BFEBFBFF000906EA');
-        appendLog('Found Processor ID: BFEBFBFF000906EA');
+    
+    const runSequence = async () => {
+      try {
+        // Step 1: Hashing mb
+        await sleep(1200, signal);
+        const mbIdPayload = 'BaseBoard_X99_A221';
+        setRawMbId(mbIdPayload);
+        appendLog(`Found Motherboard ID: ${mbIdPayload}`);
+        appendLog('Executing WMI query for Processor ID...');
+        
+        // Step 2: Hashing cpu
+        await sleep(1200, signal);
+        const cpuIdPayload = 'BFEBFBFF000906EA';
+        setRawCpuId(cpuIdPayload);
+        appendLog(`Found Processor ID: ${cpuIdPayload}`);
         appendLog('Computing cryptographic hash: H(ID_mb || ID_cpu)...');
         
-        timeoutRef.current = setTimeout(() => {
-          setHashedId('8F3A-99B2-C711');
-          appendLog('Hash generated: 8F3A-99B2-C711');
-          setStatus('validating');
-          appendLog('Sending secure payload to Control Plane...');
-          
-          timeoutRef.current = setTimeout(() => {
-            if (licenseKey.trim() === 'VALID-KEY') {
-              setStatus('success');
-              appendLog('Handshake accepted. Local proxy online.');
-            } else {
-              setStatus('error');
-              appendLog('Connection rejected: Invalid license key.');
-            }
-          }, 1500);
-        }, 1500);
-      }, 1500);
-    }, 1500);
+        // Step 3: Compute hash
+        await sleep(1000, signal);
+        const inputString = mbIdPayload + cpuIdPayload;
+        let hashInt = 0;
+        for (let i = 0; i < inputString.length; i++) {
+           hashInt = Math.imul(31, hashInt) + inputString.charCodeAt(i) | 0;
+        }
+        const dynamicHash = Math.abs(hashInt).toString(16).toUpperCase().padStart(8, '0') + '-' + Date.now().toString(16).toUpperCase().slice(-4);
+        setHashedId(dynamicHash);
+        appendLog(`Hash generated: ${dynamicHash}`);
+        setStatus('validating');
+        appendLog('Sending secure payload to Control Plane...');
+        
+        // Step 4: Validate
+        await sleep(1500, signal);
+        
+        if (licenseKey.trim().toUpperCase() === 'VALID-KEY') {
+          setStatus('success');
+          appendLog('Handshake accepted. Local proxy online.');
+          addNotification({
+            type: 'success',
+            title: 'Edge Node Registered',
+            message: `Hardware bond established for node ${dynamicHash}. Telemetry pipe active.`
+          });
+        } else {
+          setStatus('error');
+          appendLog('Connection rejected: Invalid license key.');
+          addNotification({
+            type: 'error',
+            title: 'Edge Auth Failure',
+            message: `Node registration rejected for hash ${dynamicHash}. Invalid setup key.`
+          });
+        }
+      } catch (err: any) {
+        if (err.message !== 'Aborted') {
+          console.error('Sequence failed', err);
+        }
+      }
+    };
+
+    runSequence();
   };
 
   const handleReset = () => {
+    cleanup();
     setStatus('idle');
     setLicenseKey('');
     setLogs([]);
@@ -152,6 +214,7 @@ export const DataPlaneNode: React.FC = () => {
                       value={licenseKey}
                       onChange={(e) => setLicenseKey(e.target.value)}
                       placeholder="Enter activation token (Try: VALID-KEY)"
+                      maxLength={256}
                       disabled={status === 'hashing' || status === 'validating' || status === 'success'}
                       className="w-full bg-vs-bg border border-vs-border rounded pl-12 pr-4 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-vs-accent/50 focus:border-vs-accent transition-all disabled:opacity-50 shadow-inner font-mono tracking-tight"
                     />
@@ -168,6 +231,7 @@ export const DataPlaneNode: React.FC = () => {
                    )) : (
                      <div className="text-vs-text-muted opacity-30 italic">AGENT IDLE: Awaiting initialization sequence...</div>
                    )}
+                   <div ref={logsEndRef} />
                  </div>
               </div>
             </div>

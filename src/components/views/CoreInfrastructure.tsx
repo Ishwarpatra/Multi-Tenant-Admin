@@ -4,6 +4,7 @@ import {
   Settings, Terminal, ToggleLeft, ToggleRight, Loader2, 
   Activity, Lock, GitBranch, Cpu 
 } from 'lucide-react';
+import { VSCodeSelect } from '../ui/VSCodeSelect';
 
 export const CoreInfrastructure: React.FC<{onOpenSettings?: () => void}> = ({onOpenSettings}) => {
   const [activeConfig, setActiveConfig] = useState<string | null>(null);
@@ -15,16 +16,41 @@ export const CoreInfrastructure: React.FC<{onOpenSettings?: () => void}> = ({onO
   const [rlsLoading, setRlsLoading] = useState(false);
 
   const testRls = () => {
+    if (!rlsQuery.toLowerCase().startsWith('select')) {
+      setRlsLoading(true);
+      setTimeout(() => {
+        setRlsResult(`[SQL SYNTAX ERROR]
+Unauthorized Mutation attempt detected. Multi-tenant RLS policies strictly enforce read-only operations via the analytics mirror.
+Trace: RBAC_DENY_NON_SELECT_OP`);
+        setRlsLoading(false);
+      }, 500);
+      return;
+    }
+
     setRlsLoading(true);
     setRlsResult(null);
+    let randomDropped = 0;
+    let rowCount = 0;
+    
+    if (rlsTenantId === 'tenant_A') {
+      rowCount = 2;
+      randomDropped = 1402;
+    } else if (rlsTenantId === 'tenant_B') {
+      rowCount = 48;
+      randomDropped = 845;
+    } else {
+      rowCount = 0;
+      randomDropped = 2190;
+    }
+
     setTimeout(() => {
       setRlsResult(`[Postgres RLS Policy Enforced]
 Execute: SET ROLE application_user;
 Execute: SET request.jwt.claim.tenant_id = '${rlsTenantId}';
 Execute: ${rlsQuery}
 
-Result: 2 rows returned. 
-(Note: 1,402 records belonging to other tenants were dropped at the DB engine level before execution planner returned results.)`);
+Result: ${rowCount} rows returned. 
+(Note: ${randomDropped} records belonging to other tenants were dropped at the DB engine level before execution planner returned results.)`);
       setRlsLoading(false);
     }, 800);
   };
@@ -60,16 +86,17 @@ Result: 2 rows returned.
                 <div className="flex flex-col gap-3">
                    <div className="flex items-center gap-3">
                       <label htmlFor="rls-tenant" className="text-xs text-gray-400 w-24">Injected Tenant:</label>
-                      <select 
-                        id="rls-tenant"
+                      <VSCodeSelect 
                         value={rlsTenantId} 
-                        onChange={e=>setRlsTenantId(e.target.value)} 
-                        className="bg-vs-base border border-vs-border text-white text-xs p-1.5 focus:border-vs-accent outline-none rounded-sm"
-                      >
-                        <option value="tenant_A">Stark Industries (A)</option>
-                        <option value="tenant_B">Wayne Enterprises (B)</option>
-                        <option value="tenant_C">Acme Corp (C)</option>
-                      </select>
+                        onChange={(v) => setRlsTenantId(v)} 
+                        options={['tenant_A', 'tenant_B', 'tenant_C']}
+                        labels={{
+                          'tenant_A': 'Stark Industries (A)',
+                          'tenant_B': 'Wayne Enterprises (B)',
+                          'tenant_C': 'Acme Corp (C)'
+                        }}
+                        className="w-48"
+                      />
                    </div>
                    <div className="flex items-center gap-3">
                       <label htmlFor="rls-query" className="text-xs text-gray-400 w-24">Query Payload:</label>
@@ -168,17 +195,27 @@ Result: 2 rows returned.
           {/* Hexagonal Billing Card */}
           <SolutionCard 
             id="billing"
-            onConfigure={() => onOpenSettings?.()}
+            isActive={activeConfig === 'billing'}
+            onConfigure={() => setActiveConfig(activeConfig === 'billing' ? null : 'billing')}
             icon={<CreditCard size={20} className="text-blue-500" />}
             title="6. Hexagonal Billing Architecture"
             subtitle="Vendor-Agnostic Usage Metering"
             badgeLabel="Adapter: Kill Bill (OS)"
           >
-             <p className="text-vs-text text-[13px] leading-relaxed mt-2">
-                Decouples core logic from billing providers. A standardized adapter pipes usage events 
-                into an open-core Billing engine, handling complex proration and subscription cycles 
-                without bloating the Control Plane backend.
-             </p>
+             <div className="flex flex-col gap-3">
+               <p className="text-vs-text text-[13px] leading-relaxed mt-2">
+                  Decouples core logic from billing providers. A standardized adapter pipes usage events 
+                  into an open-core Billing engine.
+               </p>
+               {activeConfig === 'billing' && (
+                 <button 
+                  onClick={() => onOpenSettings?.()}
+                  className="bg-vs-active hover:bg-vs-hover text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2 border border-vs-border rounded-sm animate-in slide-in-from-top-1 cursor-pointer"
+                 >
+                   Open Billing Gateways
+                 </button>
+               )}
+             </div>
           </SolutionCard>
         </div>
       </div>
@@ -246,7 +283,10 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
           <CheckCircle2 size={12} />
           {badgeLabel}
         </div>
-        <button className="text-[11px] text-vs-text-muted hover:text-white transition-colors flex items-center gap-1.5 font-medium px-2 py-1 rounded hover:bg-vs-base border-none cursor-pointer">
+        <button 
+          onClick={() => alert(`Redirecting to internal architecture wiki for: ${title}`)}
+          className="text-[11px] text-vs-text-muted hover:text-white transition-colors flex items-center gap-1.5 font-medium px-2 py-1 rounded hover:bg-vs-base border-none cursor-pointer"
+        >
           <span>Documentation</span>
           <Terminal size={12} />
         </button>
