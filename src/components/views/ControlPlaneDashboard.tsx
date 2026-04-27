@@ -141,7 +141,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
     >
       <div className="relative h-full w-full overflow-hidden">
         <div className={activeTab === 'infrastructure' ? 'block h-full' : 'hidden'}><CoreInfrastructure onOpenSettings={() => setActiveTab('settings')} /></div>
-        <div className={activeTab === 'hardware' ? 'block h-full' : 'hidden'}><HardwareMonitoring /></div>
+        <div className={activeTab === 'hardware' ? 'block h-full' : 'hidden'}><HardwareMonitoring isVisible={activeTab === 'hardware'} /></div>
         <div className={activeTab === 'secrets' ? 'block h-full' : 'hidden'}><SecretsVault /></div>
         <div className={activeTab === 'localenv' ? 'block h-full' : 'hidden'}><LocalEnvManager /></div>
         <div className={activeTab === 'settings' ? 'block h-full' : 'hidden'}><SettingsView /></div>

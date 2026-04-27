@@ -12,11 +12,31 @@ export const INITIAL_SECRETS = [
   { id: '4', keyName: 'REDIS_CACHE_URL', value: 'redis://...1', env: 'Development', timestamp: Date.now() - 5000 },
 ];
 
+export const INITIAL_WORKSPACE_FILES = [
+  { name: '.env', vars: [] },
+  { name: '.env.local', vars: [] },
+  { name: '.env.production', vars: [] }
+];
+
+export const INITIAL_ARCH_LOGS = [
+  "2023-10-[SYS] Bootstrapping global proxy router...",
+  "2023-10-[EXT] Mounting 4 available telemetry nodes.",
+  "2023-10-[INF] V8 Engine allocated. JIT compiler warm.",
+  "2023-10-[NET] Bound secure TLS listeners on wildcard interfaces.",
+  "2023-10-[SYS] Core ready. Awaiting distributed state commands."
+];
+
 export const MockApiService = {
   getTelemetryNodes: async () => {
     return new Promise<typeof INITIAL_NODES>(resolve => setTimeout(() => resolve([...INITIAL_NODES]), 600));
   },
   getSecrets: async () => {
     return new Promise<typeof INITIAL_SECRETS>(resolve => setTimeout(() => resolve([...INITIAL_SECRETS]), 400));
+  },
+  getWorkspaceFiles: async () => {
+    return new Promise<typeof INITIAL_WORKSPACE_FILES>(resolve => setTimeout(() => resolve([...INITIAL_WORKSPACE_FILES]), 300));
+  },
+  getArchLogs: async () => {
+    return new Promise<typeof INITIAL_ARCH_LOGS>(resolve => setTimeout(() => resolve([...INITIAL_ARCH_LOGS]), 500));
   }
 };

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 
 export type Theme = 'dark' | 'light' | 'hc';
 
@@ -17,6 +17,19 @@ interface AppSettings {
   telemetryEnabled: boolean;
 }
 
+export interface EnvVar {
+  id: string;
+  key: string;
+  value: string;
+  comment: string;
+  isActive: boolean;
+}
+
+export interface EnvFile {
+  name: string;
+  vars: EnvVar[];
+}
+
 interface AppContextType {
   settings: AppSettings;
   updateSettings: (updates: Partial<AppSettings>) => void;
@@ -24,14 +37,20 @@ interface AppContextType {
   setActiveRootView: (view: 'control' | 'data') => void;
 }
 
+interface WorkspaceContextType {
+  files: EnvFile[];
+  setFiles: React.Dispatch<React.SetStateAction<EnvFile[]>>;
+}
+
 interface NotificationContextType {
   notifications: Notification[];
   addNotification: (n: Omit<Notification, 'id' | 'timestamp'>) => void;
-  dismissNotification: (id: string) => void;
+  dismissNotification: (id: string, man?: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AppSettings>({
@@ -43,30 +62,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeRootView, setActiveRootView] = useState<'control' | 'data'>('control');
+  
+  const [files, setFiles] = useState<EnvFile[]>([]);
 
-  const updateSettings = (updates: Partial<AppSettings>) => {
+  useEffect(() => {
+    // Initial data fetch
+    import('../services/mockApiService').then(({ MockApiService }) => {
+      MockApiService.getWorkspaceFiles().then(data => {
+        setFiles(data);
+      }).catch(() => {
+        // Fallback or handle error
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${settings.fontSize}px`;
+  }, [settings.fontSize]);
+
+  const updateSettings = useCallback((updates: Partial<AppSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const addNotification = (n: Omit<Notification, 'id' | 'timestamp'>) => {
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const addNotification = useCallback((n: Omit<Notification, 'id' | 'timestamp'>) => {
     const id = Math.random().toString(36).substring(7);
     setNotifications(prev => [{ ...n, id, timestamp: new Date() }, ...prev].slice(0, 50));
-  };
+    setTimeout(() => {
+      dismissNotification(id);
+    }, 4000);
+  }, [dismissNotification]);
 
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
+  const appValue = useMemo(() => ({ settings, updateSettings, activeRootView, setActiveRootView }), [settings, updateSettings, activeRootView]);
+  const notifValue = useMemo(() => ({ notifications, addNotification, dismissNotification }), [notifications, addNotification, dismissNotification]);
+  const workspaceValue = useMemo(() => ({ files, setFiles }), [files, setFiles]);
 
   return (
-    <AppContext.Provider value={{ 
-      settings, updateSettings, 
-      activeRootView, setActiveRootView
-    }}>
-      <NotificationContext.Provider value={{
-        notifications, addNotification, dismissNotification
-      }}>
-        {children}
-      </NotificationContext.Provider>
+    <AppContext.Provider value={appValue}>
+      <WorkspaceContext.Provider value={workspaceValue}>
+        <NotificationContext.Provider value={notifValue}>
+          {children}
+        </NotificationContext.Provider>
+      </WorkspaceContext.Provider>
     </AppContext.Provider>
   );
 };
@@ -74,6 +114,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) throw new Error('useApp must be used within AppProvider');
+  return context;
+};
+
+export const useWorkspace = () => {
+  const context = useContext(WorkspaceContext);
+  if (!context) throw new Error('useWorkspace must be used within AppProvider');
   return context;
 };
 

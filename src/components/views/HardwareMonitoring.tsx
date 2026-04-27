@@ -19,7 +19,7 @@ interface NodeData {
   heartbeat: string;
 }
 
-export const HardwareMonitoring: React.FC = () => {
+export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisible = true }) => {
   const { settings } = useApp();
   const { addNotification } = useNotifications();
   const [filterRegion, setFilterRegion] = useState<string>('All Regions');
@@ -209,17 +209,19 @@ export const HardwareMonitoring: React.FC = () => {
                 <span className="text-4xl font-light tracking-tight text-white">{totalReqsStr}<span className="text-lg text-vs-text-muted ml-1">req/s</span></span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 h-24 opacity-80 pointer-events-none">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={throughputData}>
-                    <defs>
-                      <linearGradient id="colorReqs" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#007fd4" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#007fd4" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="reqs" stroke="#007fd4" strokeWidth={2} fillOpacity={1} fill="url(#colorReqs)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {isVisible && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={throughputData}>
+                      <defs>
+                        <linearGradient id="colorReqs" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#007fd4" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#007fd4" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="reqs" stroke="#007fd4" strokeWidth={2} fillOpacity={1} fill="url(#colorReqs)" isAnimationActive={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
               <span className="text-vs-text-muted text-[11px] font-medium border-t border-vs-border pt-2 mt-auto z-10 relative">Piped directly to Redis Streams</span>
             </div>

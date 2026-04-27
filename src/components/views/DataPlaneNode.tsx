@@ -32,6 +32,16 @@ export const DataPlaneNode: React.FC = () => {
     return cleanup;
   }, []);
 
+  useEffect(() => {
+    import('../../services/mockApiService').then(({ MockApiService }) => {
+      MockApiService.getArchLogs().then(data => {
+        setLogs(prev => prev.length === 0 ? data : prev);
+      }).catch(err => {
+        console.error(err);
+      });
+    });
+  }, []);
+
   const appendLog = (msg: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };

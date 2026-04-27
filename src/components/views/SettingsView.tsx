@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
-import { Settings, Search, Check, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Search, Check, ChevronDown, X } from 'lucide-react';
 import { useApp, Theme } from '../../context/AppContext';
 import { VSCodeSelect } from '../ui/VSCodeSelect';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export const SettingsView: React.FC = () => {
   const { settings, updateSettings } = useApp();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   
   const settingRows = [
@@ -16,6 +28,8 @@ export const SettingsView: React.FC = () => {
       description: 'Controls the font size in pixels across the entire application interface.',
       control: (
         <input 
+          id="font-size"
+          aria-describedby="font-size-desc"
           type="number" 
           value={settings.fontSize}
           onChange={e => updateSettings({ fontSize: parseInt(e.target.value) || 12 })}
@@ -30,6 +44,8 @@ export const SettingsView: React.FC = () => {
       description: 'Controls auto save of dirty editors. Choose afterDelay to save changes automatically.',
       control: (
         <VSCodeSelect 
+          id="auto-save"
+          aria-describedby="auto-save-desc"
           value={settings.autosave} 
           options={['off', 'afterDelay', 'onFocusChange', 'onWindowChange']} 
           onChange={(val) => updateSettings({ autosave: val as any })}
@@ -43,6 +59,8 @@ export const SettingsView: React.FC = () => {
       description: 'Specifies the color theme used in the workbench. High Contrast mode is optimized for accessibility.',
       control: (
         <VSCodeSelect 
+          id="color-theme"
+          aria-describedby="color-theme-desc"
           value={settings.theme} 
           options={['dark', 'light', 'hc']} 
           labels={{ dark: 'Dark (Visual Studio)', light: 'Light (Visual Studio)', hc: 'High Contrast' }}
@@ -58,22 +76,23 @@ export const SettingsView: React.FC = () => {
       control: (
         <div className="flex items-center gap-2">
           <input 
-            id="telemetry-check"
+            id="telemetry"
+            aria-describedby="telemetry-desc"
             type="checkbox" 
             checked={settings.telemetryEnabled}
             onChange={e => updateSettings({ telemetryEnabled: e.target.checked })}
             className="w-4 h-4 cursor-pointer"
           />
-          <label htmlFor="telemetry-check" className="text-vs-text-muted text-xs">Enabled</label>
+          <label htmlFor="telemetry" className="text-vs-text-muted text-xs">Enabled</label>
         </div>
       )
     }
   ];
 
   const filteredRows = settingRows.filter(row => 
-    row.label.toLowerCase().includes(search.toLowerCase()) || 
-    row.description.toLowerCase().includes(search.toLowerCase()) ||
-    row.category.toLowerCase().includes(search.toLowerCase())
+    row.label.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+    row.description.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    row.category.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   return (
@@ -83,7 +102,7 @@ export const SettingsView: React.FC = () => {
           <Settings size={18} className="text-vs-accent" />
           <h2 className="text-white text-[15px] font-medium tracking-tight">Settings</h2>
         </div>
-        <div className="w-64 relative">
+        <div className="w-72 relative">
            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-vs-text-muted" />
            <input 
              value={search}
@@ -91,6 +110,7 @@ export const SettingsView: React.FC = () => {
              placeholder="Search settings (e.g. 'theme' or 'font')" 
              className="w-full bg-vs-active border border-vs-border focus:border-vs-accent text-white px-8 py-1.5 text-xs outline-none rounded-sm transition-all shadow-inner"
            />
+           {search && <button onClick={() => setSearch('')} className="absolute right-1.5 top-1.5 text-gray-400 hover:text-white bg-transparent border-none cursor-pointer"><X size={12}/></button>}
         </div>
       </header>
       
@@ -104,8 +124,8 @@ export const SettingsView: React.FC = () => {
                   <div className="space-y-8 pl-4">
                     {filteredRows.filter(r => r.category === cat).map(row => (
                       <div key={row.id} className="flex flex-col gap-1 max-w-2xl animate-in slide-in-from-left-2 duration-300">
-                        <label className="text-[13px] font-semibold text-vs-text">{row.label}</label>
-                        <p className="text-[12px] text-vs-text-muted mb-3 leading-relaxed">{row.description}</p>
+                        <label htmlFor={row.id} className="text-[13px] font-semibold text-vs-text">{row.label}</label>
+                        <p id={`${row.id}-desc`} className="text-[12px] text-vs-text-muted mb-3 leading-relaxed">{row.description}</p>
                         {row.control}
                       </div>
                     ))}

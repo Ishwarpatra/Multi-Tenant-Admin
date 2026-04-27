@@ -1,46 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Trash2, Key, ChevronRight, FileText, 
-  Search, Info, AlertCircle, Save, FolderOpen
+  Search, Info, AlertCircle, Save, FolderOpen, FilePlus, X
 } from 'lucide-react';
+import { useWorkspace, useNotifications } from '../../context/AppContext';
 
-interface EnvVar {
-  key: string;
-  value: string;
+function generateId() {
+  return Math.random().toString(36).substring(7);
 }
 
-interface EnvFile {
-  name: string;
-  vars: EnvVar[];
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
 }
 
 export const LocalEnvManager: React.FC = () => {
-  const [files, setFiles] = useState<EnvFile[]>([
-    { name: '.env', vars: [{ key: 'PORT', value: '3000' }, { key: 'DB_URL', value: 'localhost://5432' }] },
-    { name: '.env.local', vars: [{ key: 'NODE_ENV', value: 'development' }] },
-    { name: '.env.production', vars: [{ key: 'DB_URL', value: 'production.db.cluster' }] }
-  ]);
+  const { files, setFiles } = useWorkspace();
+  const { addNotification } = useNotifications();
   
   const [activeFileIdx, setActiveFileIdx] = useState(0);
   const [expanded, setExpanded] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [saving, setSaving] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [rawEnvText, setRawEnvText] = useState('');
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const activeFile = files[activeFileIdx];
+  const activeFile = files[activeFileIdx] || { name: '', vars: [] };
 
   const handleSave = () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 800);
+    setTimeout(() => {
+      setSaving(false);
+      addNotification({ type: 'success', title: 'File Saved', message: `Successfully synchronized ${activeFile.name} with local workspace workspace.` });
+    }, 800);
+  };
+
+  const handleCreateFile = () => {
+    const name = window.prompt("New environment file name:", ".env.custom");
+    if (!name) return;
+    if (files.some(f => f.name === name)) {
+      addNotification({ type: 'error', title: 'Action Failed', message: 'A file with that name already exists in the workspace.' });
+      return;
+    }
+    setFiles(prev => [...prev, { name, vars: [] }]);
+    setActiveFileIdx(files.length);
+  };
+
+  const handleDeleteFile = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (files.length <= 1) {
+      addNotification({ type: 'error', title: 'Action Failed', message: 'You must have at least one environment file in the workspace.' });
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete ${files[idx].name}?`)) {
+      setFiles(prev => prev.filter((_, i) => i !== idx));
+      if (activeFileIdx >= idx) {
+        setActiveFileIdx(Math.max(0, activeFileIdx - 1));
+      }
+    }
   };
 
   const handleRawImport = () => {
     try {
       setParseError(null);
-      const vars: EnvVar[] = [];
+      const vars: any[] = [];
       const lines = rawEnvText.split(/\r?\n/);
       let currentKey = '';
       let currentValue = '';
@@ -52,7 +84,7 @@ export const LocalEnvManager: React.FC = () => {
         if (insideQuotes) {
            if (line.endsWith(insideQuotes)) {
               currentValue += '\n' + line.slice(0, -1);
-              vars.push({ key: currentKey, value: currentValue });
+              vars.push({ id: generateId(), key: currentKey, value: currentValue, comment: '', isActive: true });
               insideQuotes = null;
            } else {
               currentValue += '\n' + line;
@@ -75,9 +107,10 @@ export const LocalEnvManager: React.FC = () => {
           } else {
              if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
                val = val.slice(1, -1);
+             } else {
+               val = val.split(/\s+#/)[0].trim(); // trim inline comments safely only if unquoted
              }
-             val = val.split(/\s+#/)[0].trim(); // trim inline comments safely
-             vars.push({ key, value: val });
+             vars.push({ id: generateId(), key, value: val, comment: '', isActive: true });
           }
         }
       }
@@ -91,6 +124,7 @@ export const LocalEnvManager: React.FC = () => {
       setFiles(newFiles);
       setImportModalOpen(false);
       setRawEnvText('');
+      addNotification({ type: 'success', title: 'Import Complete', message: `Successfully parsed and injected ${vars.length} variables into ${activeFile.name}.` });
     } catch (err: any) {
       setParseError(err.message || 'Failed to parse raw .env blob.');
     }
@@ -98,40 +132,51 @@ export const LocalEnvManager: React.FC = () => {
 
   const addVar = () => {
     const newFiles = [...files];
-    newFiles[activeFileIdx].vars.push({ key: '', value: '' });
+    newFiles[activeFileIdx].vars.push({ id: generateId(), key: '', value: '', comment: '', isActive: true });
     setFiles(newFiles);
   };
 
-  const updateVar = (idx: number, field: keyof EnvVar, val: string) => {
+  const updateVar = (id: string, field: 'key'|'value', val: string) => {
     const newFiles = [...files];
-    const item = newFiles[activeFileIdx].vars[idx];
+    const vars = newFiles[activeFileIdx].vars;
+    const item = vars.find(v => v.id === id);
+    if (!item) return;
+    
     if (field === 'key') {
-      // Basic sanitization
-      item.key = val.replace(/[^A-Z0-9_]/gi, '').toUpperCase();
+      let sanitized = val.replace(/[^a-zA-Z0-9_]/g, '').toUpperCase();
+      if (/^[0-9]/.test(sanitized)) {
+        sanitized = 'APP_' + sanitized;
+      }
+      item.key = sanitized;
     } else {
       item.value = val;
     }
     setFiles(newFiles);
   };
 
-  const removeVar = (idx: number) => {
+  const removeVar = (id: string) => {
     const newFiles = [...files];
-    newFiles[activeFileIdx].vars.splice(idx, 1);
+    newFiles[activeFileIdx].vars = newFiles[activeFileIdx].vars.filter(v => v.id !== id);
     setFiles(newFiles);
   };
 
   const filteredVars = activeFile.vars.filter(v => 
-    v.key.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    v.value.toLowerCase().includes(searchTerm.toLowerCase())
+    v.key.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+    v.value.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
   return (
     <div className="flex h-full bg-vs-base text-vs-text font-sans">
       {/* VS Code styled Tree View Sidebar */}
-      <aside className="w-64 border-r border-vs-border bg-vs-bg flex flex-col flex-shrink-0">
+      <aside className="w-64 border-r border-vs-border bg-vs-bg flex flex-col flex-shrink-0 group/sidebar relative">
         <div className="px-4 py-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-vs-text-muted">
           <span>Local Workspace</span>
-          <FolderOpen size={14} />
+          <div className="flex items-center gap-2">
+             <button onClick={handleCreateFile} className="bg-transparent border-none text-vs-text-muted hover:text-white cursor-pointer" title="New File" aria-label="New File">
+               <FilePlus size={14} />
+             </button>
+             <FolderOpen size={14} />
+          </div>
         </div>
         
         <button 
@@ -146,12 +191,17 @@ export const LocalEnvManager: React.FC = () => {
           <div className="flex flex-col">
             {files.map((file, idx) => (
               <button
-                key={file.name}
+                key={`${file.name}-${idx}`}
                 onClick={() => setActiveFileIdx(idx)}
-                className={`flex items-center gap-2 px-6 py-1 text-[13px] border-none text-left w-full h-7 ${activeFileIdx === idx ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:bg-vs-hover hover:text-vs-text'}`}
+                className={`flex justify-between items-center px-6 py-1 text-[13px] border-none text-left w-full h-7 group/item ${activeFileIdx === idx ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:bg-vs-hover hover:text-vs-text cursor-pointer'}`}
               >
-                <FileText size={14} className={activeFileIdx === idx ? 'text-vs-accent' : 'text-vs-text-muted'} />
-                {file.name}
+                <div className="flex items-center gap-2 pointer-events-none">
+                  <FileText size={14} className={activeFileIdx === idx ? 'text-vs-accent' : 'text-vs-text-muted'} />
+                  {file.name}
+                </div>
+                <div onClick={(e) => handleDeleteFile(idx, e)} className="text-vs-text-muted hover:text-vs-error opacity-0 group-hover/item:opacity-100 transition-opacity">
+                  <Trash2 size={12} />
+                </div>
               </button>
             ))}
           </div>
@@ -174,6 +224,7 @@ export const LocalEnvManager: React.FC = () => {
                 placeholder="Filter variables..."
                 className="bg-vs-active border border-vs-border rounded-sm py-1 pl-8 pr-3 text-xs text-white focus:border-vs-accent outline-none w-48"
               />
+              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-1.5 top-1.5 text-gray-400 hover:text-white bg-transparent border-none cursor-pointer"><X size={12}/></button>}
             </div>
             <button 
               onClick={() => setImportModalOpen(true)}
@@ -199,22 +250,22 @@ export const LocalEnvManager: React.FC = () => {
               <span></span>
             </div>
 
-            {filteredVars.map((v, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1.5fr_40px] gap-2 animate-in slide-in-from-left-1 duration-300">
+            {filteredVars.map((v) => (
+              <div key={v.id} className="grid grid-cols-[1fr_1.5fr_40px] gap-2 animate-in slide-in-from-left-1 duration-300">
                 <input 
                   value={v.key}
-                  onChange={e => updateVar(i, 'key', e.target.value)}
+                  onChange={e => updateVar(v.id, 'key', e.target.value)}
                   placeholder="ENV_VAR_KEY"
                   className="bg-vs-bg border border-vs-border rounded-sm p-2 text-xs font-mono text-vs-accent focus:border-vs-accent outline-none"
                 />
                 <input 
                   value={v.value}
-                  onChange={e => updateVar(i, 'value', e.target.value)}
+                  onChange={e => updateVar(v.id, 'value', e.target.value)}
                   placeholder="Value"
                   className="bg-vs-bg border border-vs-border rounded-sm p-2 text-xs font-mono text-vs-text focus:border-vs-accent outline-none"
                 />
                 <button 
-                  onClick={() => removeVar(i)}
+                  onClick={() => removeVar(v.id)}
                   className="flex items-center justify-center hover:bg-vs-error/20 text-vs-text-muted hover:text-vs-error transition-colors rounded-sm border-none bg-transparent cursor-pointer"
                 >
                   <Trash2 size={14} />
@@ -222,9 +273,9 @@ export const LocalEnvManager: React.FC = () => {
               </div>
             ))}
 
-            {filteredVars.length === 0 && searchTerm && (
+            {filteredVars.length === 0 && debouncedSearchTerm && (
               <div className="p-8 text-center text-vs-text-muted italic border border-dashed border-vs-border rounded bg-vs-bg/50">
-                No variables matching "{searchTerm}"
+                No variables matching "{debouncedSearchTerm}"
               </div>
             )}
 
@@ -257,7 +308,7 @@ export const LocalEnvManager: React.FC = () => {
                      <FileText size={16} /> Import Raw .env Blob
                    </h2>
                    <button onClick={() => { setImportModalOpen(false); setParseError(null); setRawEnvText(''); }} className="text-vs-text-muted hover:text-white border-none bg-transparent cursor-pointer">
-                     <Info size={16} />
+                     <X size={16} />
                    </button>
                 </header>
                 <div className="p-4 flex-1 flex flex-col min-h-0">
@@ -272,7 +323,7 @@ export const LocalEnvManager: React.FC = () => {
                    <textarea
                      value={rawEnvText}
                      onChange={(e) => setRawEnvText(e.target.value)}
-                     className="flex-1 w-full h-64 bg-vs-base border border-vs-border focus:border-vs-accent rounded-sm outline-none text-[12px] font-mono p-4 text-white resize-none"
+                     className="flex-1 w-full h-64 bg-vs-base border border-vs-border focus:border-vs-accent rounded-sm outline-none text-[12px] font-mono p-4 text-white resize-none border-none"
                      placeholder="# Paste .env here&#10;STRIPE_KEY=sk_test_123&#10;RSA_CERT=&#34;-----BEGIN CERTIFICATE-----&#10;MULTILINE&#10;-----END CERTIFICATE-----&#34;&#10;"
                    />
                 </div>

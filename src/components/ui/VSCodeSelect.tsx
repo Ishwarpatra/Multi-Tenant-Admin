@@ -7,14 +7,20 @@ interface VSCodeSelectProps {
   labels?: Record<string, string>;
   onChange: (val: string) => void;
   className?: string;
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-label'?: string;
 }
 
-export const VSCodeSelect: React.FC<VSCodeSelectProps> = ({ value, options, labels, onChange, className = '' }) => {
+export const VSCodeSelect: React.FC<VSCodeSelectProps> = ({ value, options, labels, onChange, className = '', id, 'aria-describedby': ariaDescribedby, 'aria-label': ariaLabel }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className={`relative ${className}`}>
       <button 
+        id={id}
+        aria-describedby={ariaDescribedby}
+        aria-label={ariaLabel}
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between bg-vs-active border border-vs-border px-3 py-1.5 text-sm outline-none rounded-sm text-left transition-all text-white ${isOpen ? 'ring-1 ring-vs-accent border-vs-accent' : 'hover:border-vs-border-light'}`}
         type="button"
