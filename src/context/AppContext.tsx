@@ -85,19 +85,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const dismissNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isDismissed: true } : n));
   }, []);
 
-  const addNotification = useCallback((n: Omit<Notification, 'id' | 'timestamp'>) => {
+  const clearHistory = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const addNotification = useCallback((n: Omit<Notification, 'id' | 'timestamp' | 'isDismissed'>) => {
     const id = Math.random().toString(36).substring(7);
-    setNotifications(prev => [{ ...n, id, timestamp: new Date() }, ...prev].slice(0, 50));
+    setNotifications(prev => [{ ...n, id, timestamp: new Date(), isDismissed: false }, ...prev].slice(0, 50));
     setTimeout(() => {
       dismissNotification(id);
     }, 4000);
   }, [dismissNotification]);
 
   const appValue = useMemo(() => ({ settings, updateSettings, activeRootView, setActiveRootView }), [settings, updateSettings, activeRootView]);
-  const notifValue = useMemo(() => ({ notifications, addNotification, dismissNotification }), [notifications, addNotification, dismissNotification]);
+  const notifValue = useMemo(() => ({ notifications, addNotification, dismissNotification, clearHistory }), [notifications, addNotification, dismissNotification, clearHistory]);
   const workspaceValue = useMemo(() => ({ files, setFiles }), [files, setFiles]);
 
   return (

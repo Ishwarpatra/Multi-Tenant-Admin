@@ -45,8 +45,14 @@ export const LocalEnvManager: React.FC = () => {
   };
 
   const handleCreateFile = () => {
-    const name = window.prompt("New environment file name:", ".env.custom");
+    const name = window.prompt("New environment file name (e.g. .env, .env.local):", ".env.custom");
     if (!name) return;
+    
+    if (!/^\.env(\.[a-zA-Z0-9_-]+)?$/.test(name)) {
+      addNotification({ type: 'error', title: 'Invalid File Name', message: 'Environment file names must strictly match .env or .env.[suffix]' });
+      return;
+    }
+
     if (files.some(f => f.name === name)) {
       addNotification({ type: 'error', title: 'Action Failed', message: 'A file with that name already exists in the workspace.' });
       return;
@@ -120,7 +126,18 @@ export const LocalEnvManager: React.FC = () => {
       }
       
       const newFiles = [...files];
-      newFiles[activeFileIdx].vars = [...newFiles[activeFileIdx].vars, ...vars];
+      const activeVars = [...newFiles[activeFileIdx].vars];
+      
+      for (const parsed of vars) {
+         const existingIndex = activeVars.findIndex(v => v.key === parsed.key);
+         if (existingIndex !== -1) {
+            activeVars[existingIndex] = { ...activeVars[existingIndex], value: parsed.value };
+         } else {
+            activeVars.push(parsed);
+         }
+      }
+      
+      newFiles[activeFileIdx].vars = activeVars;
       setFiles(newFiles);
       setImportModalOpen(false);
       setRawEnvText('');

@@ -8,9 +8,11 @@ import { X } from 'lucide-react';
 
 const NotificationContainer = () => {
   const { notifications, dismissNotification } = useNotifications();
+  const activeToasts = notifications.filter(n => !n.isDismissed);
+  
   return createPortal(
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none pt-4 pr-4">
-      {notifications.map(n => (
+      {activeToasts.map(n => (
         <div key={n.id} className={`flex items-start justify-between min-w-[300px] max-w-[400px] p-3 rounded-sm shadow-xl pointer-events-auto animate-in slide-in-from-right fade-in border border-l-4 bg-vs-panel ${
           n.type === 'error' ? 'border-vs-error border-l-vs-error' :
           n.type === 'warn' ? 'border-yellow-600/30 border-l-yellow-600' :
@@ -57,7 +59,7 @@ const AppInner = () => {
   }, [setActiveRootView]);
 
   return (
-    <main className={`h-screen w-screen overflow-hidden bg-black flex p-4 pb-0 items-end justify-center relative theme-${settings.theme}`}>
+    <main className={`h-screen w-screen overflow-hidden bg-black flex p-4 pb-0 items-end justify-center relative`}>
       {/* Discreet secret trigger - focus hidden to avoid accessibility trap */}
       <button 
         className="absolute bottom-0 right-0 w-2 h-2 opacity-0 hover:opacity-10 bg-white/20 cursor-default rounded-tl-full z-50"

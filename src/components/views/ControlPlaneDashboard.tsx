@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Files, Search, Code, Code2, LayoutGrid, Settings, 
-  Database, Activity, Shield, ShieldAlert, Key, Bell, X, Info, AlertTriangle, CheckCircle, Server 
+  Database, Activity, Shield, ShieldAlert, Key, Bell, X, Info, AlertTriangle, CheckCircle, Server, Loader2 
 } from 'lucide-react';
 import { VSCodeShell } from '../layout/VSCodeShell';
 import { HardwareMonitoring } from './HardwareMonitoring';
@@ -17,7 +17,7 @@ interface DashboardProps {
 }
 
 export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewChange }) => {
-  const { notifications, dismissNotification } = useNotifications();
+  const { notifications, clearHistory, dismissNotification } = useNotifications();
   const [activeSidebar, setActiveSidebar] = useState<string>('explorer');
   const [activeTab, setActiveTab] = useState('hardware');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -74,13 +74,60 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
     </>
   );
 
-  const SearchSidebar = (
-    <div className="p-4 flex flex-col h-full text-vs-text">
-       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">SEARCH</div>
-       <input type="text" placeholder="Search" className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full mb-2" />
-       <input type="text" placeholder="Replace" className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" />
-    </div>
-  );
+  const SearchSidebarComponent = () => {
+    const [search, setSearch] = useState('');
+    const [replace, setReplace] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [results, setResults] = useState<string[] | null>(null);
+
+    const handleSearch = () => {
+      if (!search) { setResults(null); return; }
+      setSearching(true);
+      setTimeout(() => {
+        setSearching(false);
+        setResults([]);
+      }, 600);
+    };
+
+    return (
+      <div className="p-4 flex flex-col h-full text-vs-text">
+         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">SEARCH</div>
+         <div className="flex flex-col gap-2 relative">
+           <input 
+             value={search}
+             onChange={e => setSearch(e.target.value)}
+             onKeyDown={e => e.key === 'Enter' && handleSearch()}
+             type="text" 
+             placeholder="Search" 
+             className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" 
+           />
+           <input 
+             value={replace}
+             onChange={e => setReplace(e.target.value)}
+             type="text" 
+             placeholder="Replace" 
+             className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" 
+           />
+           <button 
+             onClick={handleSearch}
+             className="mt-2 bg-vs-active hover:bg-vs-hover text-white py-1 text-xs border border-vs-border rounded-sm cursor-pointer"
+           >
+             Find
+           </button>
+   
+           <div className="mt-4 pt-4 border-t border-vs-border text-xs text-vs-text-muted">
+              {searching ? (
+                 <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" /> Searching workspace...
+                 </div>
+              ) : results !== null ? (
+                 <div>{results.length} results found.</div>
+              ) : null}
+           </div>
+         </div>
+      </div>
+    );
+  };
 
   const SettingsSidebar = (
     <div className="p-4 flex flex-col h-full text-vs-text">
@@ -92,7 +139,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
   const getSidebarContent = () => {
     switch (activeSidebar) {
       case 'explorer': return ExplorerSidebar;
-      case 'search': return SearchSidebar;
+      case 'search': return <SearchSidebarComponent />;
       case 'settings': {
         if (activeTab !== 'settings') setActiveTab('settings');
         return null;
@@ -190,7 +237,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
              {notifications.length > 0 && (
                <footer className="p-2 border-t border-vs-border bg-vs-panel">
                  <button 
-                   onClick={() => notifications.forEach(n => dismissNotification(n.id))}
+                   onClick={clearHistory}
                    className="w-full py-1.5 text-[10px] font-bold uppercase tracking-widest text-vs-text-muted hover:text-white hover:bg-vs-active rounded-sm transition-all border-none bg-transparent cursor-pointer"
                  >
                    Clear All History

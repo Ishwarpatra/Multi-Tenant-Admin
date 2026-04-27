@@ -59,8 +59,9 @@ export const SecretsVault: React.FC = () => {
   const [copiedPipeline, setCopiedPipeline] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchSecrets = () => {
     let isMounted = true;
+    setApiError(null);
     MockApiService.getSecrets()
       .then(data => {
         if (isMounted) setSecrets(data as SecretEntry[]);
@@ -69,6 +70,10 @@ export const SecretsVault: React.FC = () => {
         if (isMounted) setApiError('Connection refused: Vault proxy unavailable.');
       });
     return () => { isMounted = false; };
+  };
+
+  useEffect(() => {
+    return fetchSecrets();
   }, []);
 
   useEffect(() => {
@@ -168,7 +173,13 @@ export const SecretsVault: React.FC = () => {
       <main className="p-8 animate-in fade-in duration-300 relative h-full flex flex-col items-center justify-center">
         <AlertCircle size={48} className="text-vs-error mb-4 opacity-80" />
         <h2 className="text-xl text-white mb-2">Vault Connection Failed</h2>
-        <p className="text-vs-text-muted">{apiError}</p>
+        <p className="text-vs-text-muted mb-6">{apiError}</p>
+        <button 
+          onClick={fetchSecrets} 
+          className="bg-vs-accent hover:bg-vs-accent-hover text-white px-4 py-2 rounded-sm text-[12px] font-medium border-none cursor-pointer"
+        >
+          Retry Connection
+        </button>
       </main>
     );
   }
@@ -185,16 +196,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure Secure Environment
-        env:${filteredSecrets.map(s => `\n          ${s.keyName}: \${{ secrets.${s.keyName} }}`).join('')}
         run: |${
-filteredSecrets.map(s => `\n          echo "::add-mask::$${s.keyName}"\n          echo "${s.keyName}=$${s.keyName}" >> $GITHUB_ENV`).join('')
+filteredSecrets.map(s => `\n          echo "::add-mask::\${{ secrets.${s.keyName} }}"\n          echo "${s.keyName}=\${{ secrets.${s.keyName} }}" >> $GITHUB_ENV`).join('')
         }
-` : `variables:
-${filteredSecrets.map(s => `  ${s.keyName}: "$${s.keyName}" # Masked via Protected flag`).join('\n')}
+` : `#!/bin/bash
+# GitLab script to provision masked multitenant variables via GitLab API
+# Requires GITLAB_TOKEN environment variable
 
-deploy:
-  script:
-    - echo "Deploying with masked multitenant variables..."
+PROJECT_ID="your_project_id"
+GITLAB_URL="https://gitlab.example.com/api/v4"
+${filteredSecrets.map(s => `
+curl --request POST --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \\
+     --data "variable_type=env_var" \\
+     --data "key=${s.keyName}" \\
+     --data-urlencode "value=your_secret_value" \\
+     --data "protected=true" \\
+     --data "masked=true" \\
+     "$GITLAB_URL/projects/$PROJECT_ID/variables"`).join('\n')}
 `;
 
   return (
@@ -398,7 +416,7 @@ deploy:
                     <button onClick={() => setExportFormat('gitlab')} className={`px-4 py-1 text-[10px] font-bold uppercase rounded-sm border-none cursor-pointer ${exportFormat === 'gitlab' ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:text-white bg-transparent'}`}>GitLab CI</button>
                   </div>
                   <p className="text-xs text-gray-400 mb-4 italic opacity-80">
-                    The {exportFormat === 'github' ? 'GitHub Actions' : 'GitLab CI'} block below ensures that tokens are strictly redacted from logs.
+                    The {exportFormat === 'github' ? 'GitHub Actions' : 'GitLab API'} block below ensures that tokens are strictly redacted from logs.
                   </p>
                   <textarea readOnly value={generatedYaml} className="w-full h-64 bg-black border border-vs-border p-3 text-xs text-vs-success rounded outline-none font-mono resize-none leading-relaxed" />
                </div>
@@ -409,7 +427,7 @@ deploy:
                      const url = URL.createObjectURL(blob);
                      const a = document.createElement('a');
                      a.href = url;
-                     a.download = exportFormat === 'github' ? 'github-secret-sync.yml' : '.gitlab-ci.yml';
+                     a.download = exportFormat === 'github' ? 'github-secret-sync.yml' : '.gitlab-provision.sh';
                      a.click();
                      URL.revokeObjectURL(url);
                    }} 
