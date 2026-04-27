@@ -9,7 +9,7 @@ import { CoreInfrastructure } from './CoreInfrastructure';
 import { SecretsVault } from './SecretsVault';
 import { LocalEnvManager } from './LocalEnvManager';
 import { SettingsView } from './SettingsView';
-import { useApp } from '../../context/AppContext';
+import { useApp, useNotifications } from '../../context/AppContext';
 
 interface DashboardProps {
   view: string;
@@ -17,7 +17,7 @@ interface DashboardProps {
 }
 
 export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewChange }) => {
-  const { notifications, dismissNotification } = useApp();
+  const { notifications, dismissNotification } = useNotifications();
   const [activeSidebar, setActiveSidebar] = useState<string>('explorer');
   const [activeTab, setActiveTab] = useState('hardware');
   const [showNotifications, setShowNotifications] = useState(false);

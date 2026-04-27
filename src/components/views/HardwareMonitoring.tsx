@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, useNotifications } from '../../context/AppContext';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { AlertCircle, Monitor, Loader2, Info } from 'lucide-react';
 
@@ -20,7 +20,8 @@ interface NodeData {
 }
 
 export const HardwareMonitoring: React.FC = () => {
-  const { addNotification, settings } = useApp();
+  const { settings } = useApp();
+  const { addNotification } = useNotifications();
   const [filterRegion, setFilterRegion] = useState<string>('All Regions');
   const [filterCriticalOnly, setFilterCriticalOnly] = useState(false);
   
@@ -45,7 +46,7 @@ export const HardwareMonitoring: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isErrorState || isSeeding || !settings.telemetryEnabled || nodes.length === 0) return;
+    if (isErrorState || isSeeding || !settings.telemetryEnabled) return;
 
     const interval = setInterval(() => {
       let criticalFound = false;

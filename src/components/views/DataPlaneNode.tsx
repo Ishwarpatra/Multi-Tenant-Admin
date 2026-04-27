@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Cpu, Key, AlertCircle, CheckCircle, Loader2, ShieldAlert, Info } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useNotifications } from '../../context/AppContext';
 
 export const DataPlaneNode: React.FC = () => {
-  const { addNotification } = useApp();
+  const { addNotification } = useNotifications();
   const [status, setStatus] = useState<'idle' | 'hashing' | 'validating' | 'error' | 'success'>('idle');
   const [licenseKey, setLicenseKey] = useState('');
   const [logs, setLogs] = useState<string[]>([]);

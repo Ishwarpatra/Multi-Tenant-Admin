@@ -36,11 +36,19 @@ export const SecretsVault: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<'github' | 'gitlab'>('github');
   const [copiedPipeline, setCopiedPipeline] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
     MockApiService.getSecrets().then(data => {
-      setSecrets(data as SecretEntry[]);
+      if (isMounted) setSecrets(data as SecretEntry[]);
     });
+    return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -69,10 +77,16 @@ export const SecretsVault: React.FC = () => {
 
   const handleKeyNameChange = (val: string) => {
     // UPPER_SNAKE_CASE sanitization
-    const sanitized = val
+    let sanitized = val
       .replace(/\s+/g, '_') // Replace spaces with underscores
       .replace(/[^a-zA-Z0-9_]/g, '') // Strip special characters
       .toUpperCase();
+    
+    // Prevent environment variables starting with a digit 
+    if (/^[0-9]/.test(sanitized)) {
+      sanitized = 'APP_' + sanitized;
+    }
+    
     setNewKeyName(sanitized);
     setErrorStatus(null);
   };
@@ -206,7 +220,7 @@ deploy:
             </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full custom-scrollbar pb-2 shadow-[inset_-10px_0_10px_-10px_rgba(0,0,0,0.5)]">
           <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-vs-border bg-vs-base text-[11px] text-gray-500 uppercase tracking-wider">
@@ -228,10 +242,10 @@ deploy:
                       </td>
                       <td className="px-6 py-4">
                          <div className="flex items-center gap-2">
-                           <code className="px-2 py-1 bg-vs-base border border-vs-border rounded-sm text-[12px] text-gray-300 font-mono inline-block min-w-[200px] break-all max-w-[250px] shadow-inner">
+                           <code className="block px-2 py-1 bg-vs-base border border-vs-border rounded-sm text-[12px] text-gray-300 font-mono min-w-[200px] w-full max-w-[280px] max-h-[50px] overflow-y-auto custom-scrollbar shadow-inner break-all">
                               {isRevealed ? secret.value : '************************'}
                            </code>
-                           {!isRevealed && <div className="text-[10px] text-vs-text-muted font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">Masked</div>}
+                           {!isRevealed && <div className="text-[10px] text-vs-text-muted font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter shrink-0">Masked</div>}
                          </div>
                       </td>
                       <td className="px-6 py-4">
@@ -351,7 +365,7 @@ deploy:
                      const url = URL.createObjectURL(blob);
                      const a = document.createElement('a');
                      a.href = url;
-                     a.download = '.github/workflows/secret-sync.yml';
+                     a.download = exportFormat === 'github' ? '.github/workflows/secret-sync.yml' : '.gitlab-ci.yml';
                      a.click();
                      URL.revokeObjectURL(url);
                    }} 

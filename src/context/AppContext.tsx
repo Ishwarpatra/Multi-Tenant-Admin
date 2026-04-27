@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export type Theme = 'dark' | 'light' | 'hc';
 
-interface Notification {
+export interface Notification {
   id: string;
   type: 'info' | 'warn' | 'error' | 'success';
   title: string;
@@ -20,14 +20,18 @@ interface AppSettings {
 interface AppContextType {
   settings: AppSettings;
   updateSettings: (updates: Partial<AppSettings>) => void;
-  notifications: Notification[];
-  addNotification: (n: Omit<Notification, 'id' | 'timestamp'>) => void;
-  dismissNotification: (id: string) => void;
   activeRootView: 'control' | 'data';
   setActiveRootView: (view: 'control' | 'data') => void;
 }
 
+interface NotificationContextType {
+  notifications: Notification[];
+  addNotification: (n: Omit<Notification, 'id' | 'timestamp'>) => void;
+  dismissNotification: (id: string) => void;
+}
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AppSettings>({
@@ -56,10 +60,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{ 
       settings, updateSettings, 
-      notifications, addNotification, dismissNotification,
       activeRootView, setActiveRootView
     }}>
-      {children}
+      <NotificationContext.Provider value={{
+        notifications, addNotification, dismissNotification
+      }}>
+        {children}
+      </NotificationContext.Provider>
     </AppContext.Provider>
   );
 };
@@ -67,5 +74,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) throw new Error('useApp must be used within AppProvider');
+  return context;
+};
+
+export const useNotifications = () => {
+  const context = useContext(NotificationContext);
+  if (!context) throw new Error('useNotifications must be used within AppProvider');
   return context;
 };

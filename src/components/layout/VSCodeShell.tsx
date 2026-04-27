@@ -10,7 +10,7 @@ interface VSCodeShellProps {
   headerContent?: React.ReactNode;
 }
 
-import { useApp } from '../../context/AppContext';
+import { useApp, useNotifications } from '../../context/AppContext';
 
 export const VSCodeShell: React.FC<VSCodeShellProps> = ({ 
   children, 
@@ -20,7 +20,7 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
   topBarTitle = "Control Plane Dashboard",
   headerContent
 }) => {
-  const { notifications } = useApp();
+  const { notifications } = useNotifications();
   const hasAlerts = notifications.length > 0;
 
   return (
