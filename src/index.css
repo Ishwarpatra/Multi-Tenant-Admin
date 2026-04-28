@@ -2,70 +2,68 @@
 @import "tailwindcss";
 
 @theme {
-  --color-vs-base: var(--vscode-editor-background, #0d0d0d);
-  --color-vs-bg: var(--vscode-sideBar-background, #1e1e1e);
-  --color-vs-panel: var(--vscode-panel-background, #252526);
-  --color-vs-header: var(--vscode-titleBar-activeBackground, #2d2d2d);
-  --color-vs-hover: var(--vscode-list-hoverBackground, #2a2d2e);
-  --color-vs-active: var(--vscode-list-activeSelectionBackground, #37373d);
-  --color-vs-border: var(--vscode-sideBar-border, #3c3c3c);
-  --color-vs-border-light: var(--vscode-editorGroup-border, #454545);
-  --color-vs-text: var(--vscode-foreground, #cccccc);
-  --color-vs-text-muted: var(--vscode-descriptionForeground, #888888);
-  --color-vs-accent: var(--vscode-button-background, #0e639c);
-  --color-vs-accent-hover: var(--vscode-button-hoverBackground, #1177bb);
-  --color-vs-error: var(--vscode-errorForeground, #f4511e);
-  --color-vs-success: var(--vscode-testing-iconPassed, #00b050);
+  --color-vs-base: var(--bg-primary);
+  --color-vs-bg: var(--bg-secondary);
+  --color-vs-panel: var(--bg-tertiary);
+  --color-vs-header: var(--bg-header);
+  --color-vs-hover: var(--bg-hover);
+  --color-vs-active: var(--bg-active);
+  --color-vs-border: var(--border-color);
+  --color-vs-border-light: var(--border-light);
+  --color-vs-text: var(--text-primary);
+  --color-vs-text-muted: var(--text-secondary);
+  --color-vs-accent: var(--accent-color);
+  --color-vs-accent-hover: var(--accent-hover);
+  --color-vs-error: #f14c4c;
+  --color-vs-success: #89d185;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
-  --vscode-editor-background: #0d0d0d;
-  --vscode-sideBar-background: #1e1e1e;
-  --vscode-panel-background: #252526;
-  --vscode-titleBar-activeBackground: #2d2d2d;
-  --vscode-foreground: #cccccc;
-  --vscode-descriptionForeground: #888888;
-  --vscode-button-background: #0e639c;
-  --vscode-button-hoverBackground: #1177bb;
-  --vscode-errorForeground: #f4511e;
-  --vscode-testing-iconPassed: #00b050;
-  --vscode-sideBar-border: #3c3c3c;
-  --vscode-list-hoverBackground: #2a2d2e;
-  --vscode-list-activeSelectionBackground: #37373d;
-  --vscode-editorGroup-border: #454545;
+  --bg-primary: #0d0d0d;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #252526;
+  --bg-header: #2d2d2d;
+  --border-color: #3c3c3c;
+  --border-light: #454545;
+  --bg-active: #37373d;
+  --bg-hover: #2a2d2e;
+  --accent-color: #0e639c;
+  --accent-hover: #1177bb;
+  --text-primary: #cccccc;
+  --text-secondary: #888888;
 }
 
 .theme-light {
-  --vscode-editor-background: #ffffff;
-  --vscode-sideBar-background: #f3f3f3;
-  --vscode-panel-background: #f3f3f3;
-  --vscode-titleBar-activeBackground: #dddddd;
-  --vscode-foreground: #333333;
-  --vscode-descriptionForeground: #666666;
-  --vscode-button-background: #007acc;
-  --vscode-button-hoverBackground: #0062a3;
-  --vscode-sideBar-border: #cccccc;
-  --vscode-list-hoverBackground: #e8e8e8;
-  --vscode-list-activeSelectionBackground: #007acc;
-  --vscode-editorGroup-border: #e8e8e8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #ffffff;
+  --bg-header: #dddddd;
+  --border-color: #cccccc;
+  --border-light: #e8e8e8;
+  --bg-active: #007acc;
+  --bg-hover: #e8e8e8;
+  --accent-color: #007acc;
+  --accent-hover: #0062a3;
+  --text-primary: #333333;
+  --text-secondary: #666666;
 }
 
 .theme-hc {
-  --vscode-editor-background: #000000;
-  --vscode-sideBar-background: #000000;
-  --vscode-panel-background: #000000;
-  --vscode-titleBar-activeBackground: #000000;
-  --vscode-foreground: #ffffff;
-  --vscode-descriptionForeground: #ffffff;
-  --vscode-button-background: #000000;
-  --vscode-button-hoverBackground: #000000;
-  --vscode-sideBar-border: #ffffff;
-  --vscode-list-hoverBackground: #ffffff;
-  --vscode-list-activeSelectionBackground: #ffffff;
-  --vscode-editorGroup-border: #ffffff;
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-tertiary: #000000;
+  --bg-header: #000000;
+  --border-color: #ffffff;
+  --border-light: #ffffff;
+  --bg-active: #ffffff;
+  --bg-hover: #ffffff;
+  --accent-color: #ffffff;
+  --accent-hover: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
 }
 
 body {

@@ -35,57 +35,69 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
 
   // Different Sidebars based on activity bar selection
   const ExplorerSidebar = (
-    <>
+    <div role="tree" aria-label="Project Explorer" className="flex flex-col h-full">
       <div className="px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-vs-border bg-vs-header flex justify-between items-center">
          <span>EXPLORER</span>
          <span>...</span>
       </div>
       <div className="flex-1 py-2 overflow-y-auto custom-scrollbar">
-         <div className="px-5 py-2 text-[10.5px] font-bold text-gray-400 font-mono tracking-wider flex items-center group cursor-pointer hover:text-gray-200">
+         <div 
+           role="treeitem" 
+           aria-expanded="true"
+           className="px-5 py-2 text-[10.5px] font-bold text-gray-400 font-mono tracking-wider flex items-center group cursor-pointer hover:text-gray-200"
+          >
            <span>▼</span><span className="ml-2">MULTI-TENANT-ADMIN</span>
          </div>
-         <nav className="space-y-0.5 mt-1 border-l border-vs-border ml-6 pl-1">
+         <nav className="space-y-0.5 mt-1 border-l border-vs-border ml-6 pl-1" role="group">
             <NavItem 
               icon={<Shield size={14} className="text-yellow-500" />} 
-              label="Core Architecture.ts" 
+              label="Core Architecture" 
               active={activeTab === 'infrastructure'} 
               onClick={() => handleNavClick('infrastructure')} 
             />
             <NavItem 
               icon={<ShieldAlert size={14} className="text-purple-500" />} 
-              label="Cloud Secrets Vault.env" 
+              label="Cloud Secrets Vault" 
               active={activeTab === 'secrets'} 
               onClick={() => handleNavClick('secrets')} 
             />
             <NavItem 
               icon={<Code2 size={14} className="text-[#007fd4]" />} 
-              label="Local Workspace .env" 
+              label="Local Workspace Manager" 
               active={activeTab === 'localenv'} 
               onClick={() => handleNavClick('localenv')} 
             />
             <NavItem 
               icon={<Server size={14} className="text-blue-500" />} 
-              label="Node Telemetry.tsx" 
+              label="Node Telemetry" 
               active={activeTab === 'hardware'} 
               onClick={() => handleNavClick('hardware')} 
             />
          </nav>
       </div>
-    </>
+    </div>
   );
 
   const SearchSidebarComponent = () => {
     const [search, setSearch] = useState('');
     const [replace, setReplace] = useState('');
     const [searching, setSearching] = useState(false);
-    const [results, setResults] = useState<string[] | null>(null);
+    const [results, setResults] = useState<{file: string, count: number}[] | null>(null);
 
     const handleSearch = () => {
       if (!search) { setResults(null); return; }
       setSearching(true);
       setTimeout(() => {
         setSearching(false);
-        setResults([]);
+        // Mocking some results if query is substantial
+        if (search.length > 2) {
+          setResults([
+            { file: 'SecretsVault.tsx', count: 3 },
+            { file: 'HardwareMonitoring.tsx', count: 1 }
+          ]);
+        } else {
+          setResults([]);
+        }
       }, 600);
     };
 
@@ -110,19 +122,35 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
            />
            <button 
              onClick={handleSearch}
-             className="mt-2 bg-vs-active hover:bg-vs-hover text-white py-1 text-xs border border-vs-border rounded-sm cursor-pointer"
+             disabled={searching}
+             className="mt-2 bg-vs-accent hover:bg-vs-accent-hover text-white py-1.5 text-[11px] border-none rounded-sm cursor-pointer disabled:opacity-50"
            >
-             Find
+             {searching ? 'Finding...' : 'Run Workspace Search'}
            </button>
    
-           <div className="mt-4 pt-4 border-t border-vs-border text-xs text-vs-text-muted">
+           <div className="mt-6 pt-4 border-t border-vs-border">
               {searching ? (
-                 <div className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" /> Searching workspace...
+                 <div className="flex items-center gap-2 text-xs text-vs-text-muted italic animate-pulse">
+                    <Loader2 size={13} className="animate-spin" /> Crawling telemetry nodes...
                  </div>
               ) : results !== null ? (
-                 <div>{results.length} results found.</div>
-              ) : null}
+                 <div className="space-y-3">
+                   <div className="text-[10px] text-vs-text-muted font-bold">{results.reduce((acc, r) => acc + r.count, 0)} results in {results.length} files</div>
+                   {results.map((r, i) => (
+                     <div key={i} className="group cursor-pointer">
+                        <div className="text-[11px] text-vs-accent group-hover:underline flex items-center justify-between">
+                          <span>{r.file}</span>
+                          <span className="text-[9px] bg-vs-active px-1.5 py-0.5 rounded text-vs-text">{r.count}</span>
+                        </div>
+                     </div>
+                   ))}
+                   {results.length === 0 && (
+                     <div className="text-xs text-vs-text-muted italic">No results found matching "{search}"</div>
+                   )}
+                 </div>
+              ) : (
+                <div className="text-[10px] text-vs-text-muted italic opacity-60">Press Enter or click Find to search workspace files and configurations.</div>
+              )}
            </div>
          </div>
       </div>

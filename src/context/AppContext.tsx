@@ -8,6 +8,7 @@ export interface Notification {
   title: string;
   message: string;
   timestamp: Date;
+  isDismissed: boolean;
 }
 
 interface AppSettings {
@@ -40,12 +41,15 @@ interface AppContextType {
 interface WorkspaceContextType {
   files: EnvFile[];
   setFiles: React.Dispatch<React.SetStateAction<EnvFile[]>>;
+  isLoading: boolean;
+  error: string | null;
 }
 
 interface NotificationContextType {
   notifications: Notification[];
-  addNotification: (n: Omit<Notification, 'id' | 'timestamp'>) => void;
-  dismissNotification: (id: string, man?: boolean) => void;
+  addNotification: (n: Omit<Notification, 'id' | 'timestamp' | 'isDismissed'>) => void;
+  dismissNotification: (id: string) => void;
+  clearHistory: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -64,45 +68,67 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [activeRootView, setActiveRootView] = useState<'control' | 'data'>('control');
   
   const [files, setFiles] = useState<EnvFile[]>([]);
-
-  useEffect(() => {
-    // Initial data fetch
-    import('../services/mockApiService').then(({ MockApiService }) => {
-      MockApiService.getWorkspaceFiles().then(data => {
-        setFiles(data);
-      }).catch(() => {
-        // Fallback or handle error
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.style.fontSize = `${settings.fontSize}px`;
-  }, [settings.fontSize]);
-
-  const updateSettings = useCallback((updates: Partial<AppSettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
-  }, []);
+  const [isLoading, setIsLoading] = useState(true);
+  const [wsError, setWsError] = useState<string | null>(null);
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isDismissed: true } : n));
   }, []);
 
-  const clearHistory = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
   const addNotification = useCallback((n: Omit<Notification, 'id' | 'timestamp' | 'isDismissed'>) => {
-    const id = Math.random().toString(36).substring(7);
+    const id = crypto.randomUUID();
     setNotifications(prev => [{ ...n, id, timestamp: new Date(), isDismissed: false }, ...prev].slice(0, 50));
     setTimeout(() => {
       dismissNotification(id);
     }, 4000);
   }, [dismissNotification]);
 
+  const clearHistory = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    // Initial data fetch
+    import('../services/mockApiService').then(({ MockApiService }) => {
+      MockApiService.getWorkspaceFiles().then(data => {
+        setFiles(data);
+        setIsLoading(false);
+      }).catch(() => {
+        const msg = 'Failed to synchronize local workspace.';
+        setWsError(msg);
+        addNotification({
+          type: 'error',
+          title: 'Infrastructure Link Failure',
+          message: msg
+        });
+        setIsLoading(false);
+      });
+    });
+  }, [addNotification]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.fontSize = `${settings.fontSize}px`;
+    
+    if (settings.theme === 'light') {
+      root.classList.add('theme-light');
+      root.classList.remove('theme-hc');
+    } else if (settings.theme === 'hc') {
+      root.classList.add('theme-hc');
+      root.classList.remove('theme-light');
+    } else {
+      root.classList.remove('theme-light', 'theme-hc');
+    }
+  }, [settings.fontSize, settings.theme]);
+
+  const updateSettings = useCallback((updates: Partial<AppSettings>) => {
+    setSettings(prev => ({ ...prev, ...updates }));
+  }, []);
+
   const appValue = useMemo(() => ({ settings, updateSettings, activeRootView, setActiveRootView }), [settings, updateSettings, activeRootView]);
   const notifValue = useMemo(() => ({ notifications, addNotification, dismissNotification, clearHistory }), [notifications, addNotification, dismissNotification, clearHistory]);
-  const workspaceValue = useMemo(() => ({ files, setFiles }), [files, setFiles]);
+  const workspaceValue = useMemo(() => ({ files, setFiles, isLoading, error: wsError }), [files, setFiles, isLoading, wsError]);
 
   return (
     <AppContext.Provider value={appValue}>

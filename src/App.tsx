@@ -11,23 +11,23 @@ const NotificationContainer = () => {
   const activeToasts = notifications.filter(n => !n.isDismissed);
   
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none pt-4 pr-4">
+    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none pt-4 pr-4">
       {activeToasts.map(n => (
-        <div key={n.id} className={`flex items-start justify-between min-w-[300px] max-w-[400px] p-3 rounded-sm shadow-xl pointer-events-auto animate-in slide-in-from-right fade-in border border-l-4 bg-vs-panel ${
-          n.type === 'error' ? 'border-vs-error border-l-vs-error' :
-          n.type === 'warn' ? 'border-yellow-600/30 border-l-yellow-600' :
-          n.type === 'success' ? 'border-vs-success/30 border-l-vs-success' :
-          'border-vs-border border-l-vs-accent text-white'
+        <div key={n.id} className={`flex items-start justify-between min-w-[320px] max-w-[400px] p-4 rounded bg-vs-panel border border-vs-border shadow-2xl pointer-events-auto animate-in slide-in-from-right-4 fade-in duration-300 border-l-[4px] shadow-black/50 ${
+          n.type === 'error' ? 'border-l-vs-error' :
+          n.type === 'warn' ? 'border-l-orange-500' :
+          n.type === 'success' ? 'border-l-vs-success' :
+          'border-l-vs-accent'
         }`}>
-          <div className="flex flex-col pr-4">
-              <span className={`text-xs font-semibold mb-1 ${
+          <div className="flex flex-col pr-6">
+              <span className={`text-[12px] font-bold uppercase tracking-wider mb-1 ${
                 n.type === 'error' ? 'text-vs-error' :
-                n.type === 'warn' ? 'text-yellow-600' :
+                n.type === 'warn' ? 'text-orange-500' :
                 n.type === 'success' ? 'text-vs-success' : 'text-vs-accent'
               }`}>{n.title}</span>
-              <span className="text-xs text-vs-text">{n.message}</span>
+              <span className="text-[12px] text-vs-text leading-relaxed">{n.message}</span>
           </div>
-          <button onClick={() => dismissNotification(n.id)} className="text-gray-400 hover:text-white cursor-pointer -mt-1 p-1"><X size={14}/></button>
+          <button onClick={() => dismissNotification(n.id)} className="text-vs-text-muted hover:text-white transition-colors cursor-pointer bg-transparent border-none p-1 -mr-1 -mt-1"><X size={16}/></button>
         </div>
       ))}
     </div>,
@@ -36,20 +36,22 @@ const NotificationContainer = () => {
 };
 
 const AppInner = () => {
-  const { activeRootView, setActiveRootView, settings } = useApp();
+  const { activeRootView, setActiveRootView } = useApp();
 
-  // Hidden keyboard shortcuts for stakeholder demo transitions (Alt+Shift+Q/W)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Use Alt+Shift to avoid conflicts with VS Code / Browser shortcuts
+      // Guard: Don't trigger shortcuts if user is typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
       if (e.altKey && e.shiftKey) {
         if (e.key === 'Q' || e.key === 'q') {
           e.preventDefault();
-          e.stopPropagation();
           setActiveRootView('control');
         } else if (e.key === 'W' || e.key === 'w') {
           e.preventDefault();
-          e.stopPropagation();
           setActiveRootView('data');
         }
       }
