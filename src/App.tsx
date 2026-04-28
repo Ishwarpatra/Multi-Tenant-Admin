@@ -11,7 +11,7 @@ const NotificationContainer = () => {
   const activeToasts = notifications.filter(n => !n.isDismissed);
   
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none pt-4 pr-4">
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none pt-4 pr-4">
       {activeToasts.map(n => (
         <div key={n.id} className={`flex items-start justify-between min-w-[320px] max-w-[400px] p-4 rounded bg-vs-panel border border-vs-border shadow-2xl pointer-events-auto animate-in slide-in-from-right-4 fade-in duration-300 border-l-[4px] shadow-black/50 ${
           n.type === 'error' ? 'border-l-vs-error' :
@@ -27,7 +27,7 @@ const NotificationContainer = () => {
               }`}>{n.title}</span>
               <span className="text-[12px] text-vs-text leading-relaxed">{n.message}</span>
           </div>
-          <button onClick={() => dismissNotification(n.id)} className="text-vs-text-muted hover:text-white transition-colors cursor-pointer bg-transparent border-none p-1 -mr-1 -mt-1"><X size={16}/></button>
+          <button onClick={() => dismissNotification(n.id)} className="text-vs-text-muted hover:text-vs-text transition-colors cursor-pointer bg-transparent border-none p-1 -mr-1 -mt-1"><X size={16}/></button>
         </div>
       ))}
     </div>,
@@ -76,7 +76,7 @@ const AppInner = () => {
         <div 
           className={`col-start-1 row-start-1 w-full h-full relative mx-auto rounded-t-xl overflow-hidden shadow-2xl border border-vs-border-light flex flex-col transition-opacity duration-300 ${activeRootView === 'control' ? 'opacity-100 flex pointer-events-auto z-10' : 'opacity-0 invisible pointer-events-none z-0'}`}
         >
-          <ControlPlaneDashboard view="control-plane" onViewChange={() => {}} />
+          <ControlPlaneDashboard />
         </div>
         
         <div 

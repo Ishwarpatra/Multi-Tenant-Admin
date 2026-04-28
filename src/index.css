@@ -14,7 +14,9 @@
   --color-vs-text-muted: var(--text-secondary);
   --color-vs-accent: var(--accent-color);
   --color-vs-accent-hover: var(--accent-hover);
+  --color-vs-accent-text: var(--bg-primary);
   --color-vs-error: #f14c4c;
+  --color-vs-error-text: #ffffff;
   --color-vs-success: #89d185;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

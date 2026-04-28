@@ -22,7 +22,7 @@ export const VSCodeSelect: React.FC<VSCodeSelectProps> = ({ value, options, labe
         aria-describedby={ariaDescribedby}
         aria-label={ariaLabel}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between bg-vs-active border border-vs-border px-3 py-1.5 text-sm outline-none rounded-sm text-left transition-all text-white ${isOpen ? 'ring-1 ring-vs-accent border-vs-accent' : 'hover:border-vs-border-light'}`}
+        className={`w-full flex items-center justify-between bg-vs-active border border-vs-border px-3 py-1.5 text-sm outline-none rounded-sm text-left transition-all text-vs-text ${isOpen ? 'ring-1 ring-vs-accent border-vs-accent' : 'hover:border-vs-border-light'}`}
         type="button"
       >
         <span className="truncate">{labels ? labels[value] : value}</span>
@@ -41,7 +41,7 @@ export const VSCodeSelect: React.FC<VSCodeSelectProps> = ({ value, options, labe
                   setIsOpen(false);
                 }}
                 type="button"
-                className="w-full flex items-center justify-between px-3 py-1.5 text-sm text-white hover:bg-vs-active text-left border-none bg-transparent cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-1.5 text-sm text-vs-text hover:bg-vs-active text-left border-none bg-transparent cursor-pointer"
               >
                 <span>{labels ? labels[opt] : opt}</span>
                 {value === opt && <Check size={14} className="text-vs-accent" />}

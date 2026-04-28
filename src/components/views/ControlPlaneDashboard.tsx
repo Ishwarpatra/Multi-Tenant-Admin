@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Files, Search, Code, Code2, LayoutGrid, Settings, 
   Database, Activity, Shield, ShieldAlert, Key, Bell, X, Info, AlertTriangle, CheckCircle, Server, Loader2 
@@ -9,21 +9,21 @@ import { CoreInfrastructure } from './CoreInfrastructure';
 import { SecretsVault } from './SecretsVault';
 import { LocalEnvManager } from './LocalEnvManager';
 import { SettingsView } from './SettingsView';
-import { useApp, useNotifications } from '../../context/AppContext';
-
-interface DashboardProps {
-  view: string;
-  onViewChange: (view: string) => void;
-}
-
-export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewChange }) => {
+import { useApp, useNotifications, useWorkspace } from '../../context/AppContext';
+import { useDebounce } from '../../hooks/useDebounce';
+export const ControlPlaneDashboard: React.FC = () => {
   const { notifications, clearHistory, dismissNotification } = useNotifications();
+  const { files } = useWorkspace();
   const [activeSidebar, setActiveSidebar] = useState<string>('explorer');
   const [activeTab, setActiveTab] = useState('hardware');
+  const [lastExplorerTab, setLastExplorerTab] = useState('hardware');
   const [showNotifications, setShowNotifications] = useState(false);
 
   const handleNavClick = (tabId: string) => {
     setActiveTab(tabId);
+    if (tabId !== 'settings') {
+      setLastExplorerTab(tabId);
+    }
   };
 
   const currentTabName = 
@@ -80,78 +80,81 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
 
   const SearchSidebarComponent = () => {
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useDebounce(search, 400);
     const [replace, setReplace] = useState('');
-    const [searching, setSearching] = useState(false);
-    const [results, setResults] = useState<{file: string, count: number}[] | null>(null);
+    
+    const results = useMemo(() => {
+      if (!debouncedSearch.trim()) return null;
+      const query = debouncedSearch.toLowerCase();
+      const matches: {file: string, count: number}[] = [];
 
-    const handleSearch = () => {
-      if (!search) { setResults(null); return; }
-      setSearching(true);
-      setTimeout(() => {
-        setSearching(false);
-        // Mocking some results if query is substantial
-        if (search.length > 2) {
-          setResults([
-            { file: 'SecretsVault.tsx', count: 3 },
-            { file: 'HardwareMonitoring.tsx', count: 1 }
-          ]);
-        } else {
-          setResults([]);
-        }
-      }, 600);
+      files.forEach(file => {
+        let count = 0;
+        file.vars.forEach(v => {
+          if (v.key.toLowerCase().includes(query) || v.value.toLowerCase().includes(query)) {
+            count++;
+          }
+        });
+        if (count > 0) matches.push({ file: file.name, count });
+      });
+      return matches;
+    }, [debouncedSearch, files]);
+
+    const handleClear = () => {
+      setSearch('');
+      setDebouncedSearch('');
     };
 
     return (
       <div className="p-4 flex flex-col h-full text-vs-text">
          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">SEARCH</div>
          <div className="flex flex-col gap-2 relative">
-           <input 
-             value={search}
-             onChange={e => setSearch(e.target.value)}
-             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-             type="text" 
-             placeholder="Search" 
-             className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" 
-           />
+           <div className="relative">
+             <input 
+               value={search}
+               onChange={e => setSearch(e.target.value)}
+               placeholder="Search" 
+               className="bg-vs-base border border-vs-border p-1.5 text-[11px] outline-none focus:border-vs-accent w-full text-vs-text" 
+             />
+             {search && <button onClick={handleClear} className="absolute right-1 top-1 text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={12} /></button>}
+           </div>
            <input 
              value={replace}
              onChange={e => setReplace(e.target.value)}
-             type="text" 
              placeholder="Replace" 
-             className="bg-vs-base border border-vs-border p-1 text-[11px] outline-none focus:border-[#007fd4] w-full" 
+             className="bg-vs-base border border-vs-border p-1.5 text-[11px] outline-none focus:border-vs-accent w-full text-vs-text" 
            />
-           <button 
-             onClick={handleSearch}
-             disabled={searching}
-             className="mt-2 bg-vs-accent hover:bg-vs-accent-hover text-white py-1.5 text-[11px] border-none rounded-sm cursor-pointer disabled:opacity-50"
-           >
-             {searching ? 'Finding...' : 'Run Workspace Search'}
-           </button>
-   
-           <div className="mt-6 pt-4 border-t border-vs-border">
-              {searching ? (
-                 <div className="flex items-center gap-2 text-xs text-vs-text-muted italic animate-pulse">
-                    <Loader2 size={13} className="animate-spin" /> Crawling telemetry nodes...
+         </div>
+
+         <div className="flex-1 overflow-y-auto custom-scrollbar mt-6 pt-4 border-t border-vs-border">
+            {results && results.length > 0 ? (
+               <div className="space-y-3">
+                 <div className="text-[10px] font-bold text-vs-text-muted uppercase tracking-wider">
+                   {results.length} files matching "{debouncedSearch}"
                  </div>
-              ) : results !== null ? (
-                 <div className="space-y-3">
-                   <div className="text-[10px] text-vs-text-muted font-bold">{results.reduce((acc, r) => acc + r.count, 0)} results in {results.length} files</div>
-                   {results.map((r, i) => (
-                     <div key={i} className="group cursor-pointer">
-                        <div className="text-[11px] text-vs-accent group-hover:underline flex items-center justify-between">
-                          <span>{r.file}</span>
-                          <span className="text-[9px] bg-vs-active px-1.5 py-0.5 rounded text-vs-text">{r.count}</span>
-                        </div>
-                     </div>
-                   ))}
-                   {results.length === 0 && (
-                     <div className="text-xs text-vs-text-muted italic">No results found matching "{search}"</div>
-                   )}
-                 </div>
-              ) : (
-                <div className="text-[10px] text-vs-text-muted italic opacity-60">Press Enter or click Find to search workspace files and configurations.</div>
-              )}
-           </div>
+                 {results.map(res => (
+                   <div key={res.file} className="hover:bg-vs-active px-3 py-2 group cursor-pointer border border-vs-border/50 rounded-sm">
+                      <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2 overflow-hidden">
+                            <Code size={13} className="text-vs-accent shrink-0" />
+                            <span className="text-[11px] text-vs-text font-mono truncate">{res.file}</span>
+                         </div>
+                         <span className="bg-vs-active px-1.5 rounded-full text-[9px] font-bold text-vs-text-muted group-hover:bg-vs-accent group-hover:text-vs-text transition-colors">{res.count}</span>
+                      </div>
+                   </div>
+                 ))}
+               </div>
+            ) : debouncedSearch ? (
+               <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
+                  <Info size={32} className="text-vs-text-muted mb-2" />
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-vs-text-muted">No hits found</p>
+               </div>
+            ) : (
+               <div className="h-full flex flex-col items-center justify-center p-10 text-center text-vs-text-muted opacity-30">
+                  <Search size={40} strokeWidth={1} />
+                  <p className="text-[11px] mt-4 uppercase tracking-widest font-bold">Workspace Query Engaged</p>
+               </div>
+            )}
          </div>
       </div>
     );
@@ -168,10 +171,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
     switch (activeSidebar) {
       case 'explorer': return ExplorerSidebar;
       case 'search': return <SearchSidebarComponent />;
-      case 'settings': {
-        if (activeTab !== 'settings') setActiveTab('settings');
-        return null;
-      }
+      case 'settings': return null;
       default: return (
         <div className="p-4 text-xs text-gray-500 uppercase tracking-widest">
            {activeSidebar} view
@@ -185,7 +185,12 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
       activeSidebar={activeSidebar}
       onSidebarChange={(id) => {
         setActiveSidebar(id);
-        if (id === 'settings') setActiveTab('settings');
+        if (id === 'settings') {
+          setActiveTab('settings');
+        } else if (activeTab === 'settings') {
+          // If we are leaving the settings sidebar, we MUST leave the settings tab.
+          setActiveTab(lastExplorerTab);
+        }
       }}
       sidebarContent={getSidebarContent()}
       topBarTitle={currentTabName}
@@ -205,7 +210,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
               >
                  <Bell size={16} />
                  {notifications.length > 0 && (
-                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-vs-error text-white text-[9px] flex items-center justify-center rounded-full border border-vs-base font-bold">
+                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-vs-error text-vs-text text-[9px] flex items-center justify-center rounded-full border border-vs-base font-bold">
                      {notifications.length}
                    </span>
                  )}
@@ -226,7 +231,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
           <div className="absolute top-0 right-0 w-80 h-full bg-vs-bg border-l border-vs-border z-[100] shadow-2xl flex flex-col animate-in slide-in-from-right-4 duration-300">
              <header className="px-4 py-3 border-b border-vs-border flex items-center justify-between bg-vs-panel">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-vs-text-muted">Notification Center</span>
-                <button onClick={() => setShowNotifications(false)} className="text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer">
+                <button onClick={() => setShowNotifications(false)} className="text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer">
                   <X size={16} />
                 </button>
              </header>
@@ -237,7 +242,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
                   `}>
                     <button 
                       onClick={() => dismissNotification(n.id)}
-                      className="absolute top-2 right-2 p-1 text-vs-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer"
+                      className="absolute top-2 right-2 p-1 text-vs-text-muted hover:text-vs-text opacity-0 group-hover:opacity-100 transition-opacity bg-transparent border-none cursor-pointer"
                     >
                       <X size={12} />
                     </button>
@@ -249,7 +254,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
                         {n.type === 'info' && <Info size={14} className="text-vs-accent" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                         <div className="text-[12px] font-bold text-white truncate">{n.title}</div>
+                         <div className="text-[12px] font-bold text-vs-text truncate">{n.title}</div>
                          <div className="text-[11px] text-vs-text-muted mt-1 leading-relaxed">{n.message}</div>
                          <div className="text-[9px] text-vs-text-muted mt-2 opacity-50 font-mono italic">{n.timestamp.toLocaleTimeString()}</div>
                       </div>
@@ -266,7 +271,7 @@ export const ControlPlaneDashboard: React.FC<DashboardProps> = ({ view, onViewCh
                <footer className="p-2 border-t border-vs-border bg-vs-panel">
                  <button 
                    onClick={clearHistory}
-                   className="w-full py-1.5 text-[10px] font-bold uppercase tracking-widest text-vs-text-muted hover:text-white hover:bg-vs-active rounded-sm transition-all border-none bg-transparent cursor-pointer"
+                   className="w-full py-1.5 text-[10px] font-bold uppercase tracking-widest text-vs-text-muted hover:text-vs-text hover:bg-vs-active rounded-sm transition-all border-none bg-transparent cursor-pointer"
                  >
                    Clear All History
                  </button>
@@ -284,7 +289,7 @@ const NavItem = ({icon, label, active, onClick}: {icon: React.ReactNode, label: 
     onClick={onClick} 
     aria-current={active ? 'page' : undefined}
     className={`w-full px-3 py-1.5 ml-2 flex items-center gap-2 text-[12px] cursor-pointer transition-colors border border-transparent text-left outline-none focus:ring-1 focus:ring-vs-accent bg-transparent
-      ${active ? 'bg-vs-active text-white border-vs-border-light' : 'text-gray-400 hover:bg-vs-hover hover:text-gray-200'}
+      ${active ? 'bg-vs-active text-vs-text border-vs-border-light' : 'text-gray-400 hover:bg-vs-hover hover:text-gray-200'}
     `}
   >
      {icon}

@@ -34,10 +34,15 @@ export const SecretsVault: React.FC = () => {
   const [copied, setCopied] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All' | 'Production' | 'Staging' | 'Development'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+  };
 
   const [showInjectModal, setShowInjectModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -50,15 +55,24 @@ export const SecretsVault: React.FC = () => {
   const [copiedPipeline, setCopiedPipeline] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const isMounted = React.useRef(true);
+  
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
   const fetchSecrets = useCallback(() => {
     setLoading(true);
     setApiError(null);
     MockApiService.getSecrets()
       .then(data => {
+        if (!isMounted.current) return;
         setSecrets(data as SecretEntry[]);
         setLoading(false);
       })
       .catch(() => {
+        if (!isMounted.current) return;
         setApiError('Connection refused: Vault proxy unavailable or rate-limited.');
         setLoading(false);
       });
@@ -154,11 +168,11 @@ deploy_prod:
       <main className="p-8 h-full flex flex-col items-center justify-center animate-in fade-in duration-500">
         <div className="max-w-md text-center">
            <AlertCircle size={48} className="text-vs-error mb-4 mx-auto opacity-50" />
-           <h2 className="text-xl text-white mb-2 font-medium">Vault Synchronization Failure</h2>
+           <h2 className="text-xl text-vs-text mb-2 font-medium">Vault Synchronization Failure</h2>
            <p className="text-vs-text-muted mb-8 text-sm leading-relaxed">The secure proxy layer could not establish a handshake with the secrets domain. This may be due to regional network isolation or expired session tokens.</p>
            <button 
              onClick={fetchSecrets} 
-             className="bg-vs-accent hover:bg-vs-active text-white px-8 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest border-none cursor-pointer transition-all shadow-lg"
+             className="bg-vs-accent hover:bg-vs-active text-vs-text px-8 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest border-none cursor-pointer transition-all shadow-lg"
            >
              Reconnect Pipeline
            </button>
@@ -171,7 +185,7 @@ deploy_prod:
     <main className="p-8 h-full flex flex-col overflow-hidden animate-in fade-in duration-300">
       <header className="mb-8 flex flex-shrink-0 items-start justify-between border-b border-vs-border pb-6">
          <div className="max-w-2xl">
-            <h2 className="text-white text-xl font-light tracking-tight flex items-center gap-3">
+            <h2 className="text-vs-text text-xl font-light tracking-tight flex items-center gap-3">
               <ShieldAlert className="text-vs-accent" size={24} />
               Secrets Management Domain
             </h2>
@@ -182,7 +196,7 @@ deploy_prod:
          {revealed.size > 0 && (
            <button 
              onClick={() => setRevealed(new Set())}
-             className="bg-vs-error hover:bg-red-600 text-white px-4 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border-none cursor-pointer transition-all animate-bounce"
+             className="bg-vs-error hover:bg-red-600 text-vs-text px-4 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border-none cursor-pointer transition-all animate-bounce"
            >
              <EyeOff size={14} /> Panic: Mask All
            </button>
@@ -193,7 +207,7 @@ deploy_prod:
         <div className="px-6 py-4 border-b border-vs-border flex justify-between flex-shrink-0 items-center bg-vs-panel flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <KeyRound size={16} className="text-vs-accent opacity-70" />
-              <h2 className="text-white text-[11px] font-bold uppercase tracking-widest opacity-80">Security Payload</h2>
+              <h2 className="text-vs-text text-[11px] font-bold uppercase tracking-widest opacity-80">Security Payload</h2>
             </div>
             
             <div className="flex items-center gap-3">
@@ -203,16 +217,16 @@ deploy_prod:
                    value={searchQuery}
                    onChange={e => setSearchQuery(e.target.value)}
                    placeholder="Filter keys..." 
-                   className="bg-vs-base border border-vs-border focus:border-vs-accent text-white outline-none rounded-sm pl-8 pr-2 py-1.5 text-[11px] w-48 transition-all"
+                   className="bg-vs-base border border-vs-border focus:border-vs-accent text-vs-text outline-none rounded-sm pl-8 pr-2 py-1.5 text-[11px] w-48 transition-all"
                  />
-                 {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-1 text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer"><X size={14} /></button>}
+                 {searchQuery && <button onClick={handleClearSearch} className="absolute right-1 text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={14} /></button>}
                </div>
                <nav className="flex bg-vs-base rounded-sm border border-vs-border p-1">
                   {['All', 'Production', 'Staging', 'Development'].map(env => (
                     <button 
                       key={env} 
                       onClick={() => setFilter(env as any)}
-                      className={`px-3 py-1 text-[10px] font-bold uppercase tracking-tighter rounded-sm transition-all border-none cursor-pointer ${filter === env ? 'text-white bg-vs-active' : 'text-gray-500 hover:text-white bg-transparent'}`}
+                      className={`px-3 py-1 text-[10px] font-bold uppercase tracking-tighter rounded-sm transition-all border-none cursor-pointer ${filter === env ? 'text-vs-text bg-vs-active' : 'text-gray-500 hover:text-vs-text bg-transparent'}`}
                     >
                       {env}
                     </button>
@@ -221,94 +235,103 @@ deploy_prod:
                <button onClick={() => setShowExportModal(true)} disabled={filteredSecrets.length === 0} className="bg-vs-base hover:bg-vs-hover text-vs-text border border-vs-border px-3 py-1.5 text-[11px] rounded-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors uppercase font-bold">
                  <Download size={14} /> Export
                </button>
-               <button onClick={() => setShowInjectModal(true)} className="bg-vs-accent hover:bg-vs-accent-hover text-white px-3 py-1.5 text-[11px] rounded-sm flex items-center gap-1.5 cursor-pointer border-none font-bold uppercase shadow-lg transition-all">
+               <button onClick={() => setShowInjectModal(true)} className="bg-vs-accent hover:bg-vs-accent-hover text-vs-text px-3 py-1.5 text-[11px] rounded-sm flex items-center gap-1.5 cursor-pointer border-none font-bold uppercase shadow-lg transition-all">
                  <Plus size={14} /> Inject
                </button>
             </div>
         </div>
 
-        <div className="overflow-auto flex-1 w-full custom-scrollbar">
+        <div className="overflow-x-auto flex-1 w-full custom-scrollbar">
+           <div className="min-w-[800px] h-full flex flex-col">
            {loading ? (
              <div className="h-full flex flex-col items-center justify-center text-vs-text-muted gap-4">
                 <Loader2 size={32} className="animate-spin text-vs-accent" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Decrypting Vault...</span>
              </div>
            ) : (
-             <table className="w-full text-left border-collapse">
-                 <thead className="sticky top-0 bg-vs-base z-10 border-b border-vs-border">
-                   <tr className="text-[10px] text-vs-text-muted uppercase tracking-[0.15em] font-bold">
-                     <th className="px-6 py-4">Key Identifier</th>
-                     <th className="px-6 py-4 w-1/3">Configured Value</th>
-                     <th className="px-6 py-4">Scope</th>
-                     <th className="px-6 py-4">Last Sync</th>
-                     <th className="px-6 py-4 text-right">Actions</th>
-                   </tr>
-                 </thead>
-                 <tbody className="text-[12px]">
-                   {filteredSecrets.length > 0 ? filteredSecrets.map(secret => {
-                     const isRevealed = revealed.has(secret.id);
-                     const isCopied = copied === secret.id;
-                     return (
-                       <tr key={secret.id} className="border-b border-vs-border/50 hover:bg-vs-hover/30 transition-colors group">
-                         <td className="px-6 py-4 font-mono text-vs-accent group-hover:text-white transition-colors capitalize">
-                            {secret.keyName}
-                         </td>
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <code className="block px-2.5 py-1.5 bg-vs-base border border-vs-border rounded-sm text-[11px] text-gray-400 font-mono w-full max-w-[320px] shadow-inner break-all">
-                                 {isRevealed ? secret.value : '••••••••••••••••••••••••'}
-                              </code>
-                              {!isRevealed && <div className="text-[9px] text-vs-text-muted font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase shrink-0">Encrypted</div>}
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            <span className={`px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-sm border ${secret.env === 'Production' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : secret.env === 'Staging' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-vs-accent/10 text-vs-accent border-vs-accent/20'}`}>
-                              {secret.env}
-                            </span>
-                         </td>
-                         <td className="px-6 py-4 text-vs-text-muted text-[10px] opacity-70">
-                           <RelativeTime timestamp={secret.timestamp} tick={tick} />
-                         </td>
-                         <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button onClick={() => toggleReveal(secret.id)} className="p-1.5 text-vs-text-muted hover:text-white hover:bg-vs-active rounded cursor-pointer border-none bg-transparent" title="Toggle Visibility">
-                                 {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
-                               </button>
-                               <button onClick={() => copyToClipboard(secret.id, secret.value)} className="p-1.5 text-vs-text-muted hover:text-white hover:bg-vs-active rounded cursor-pointer border-none bg-transparent" title="Copy Value">
-                                 {isCopied ? <Check size={14} className="text-vs-success" /> : <Copy size={14} />}
-                               </button>
-                               <div className="w-[1px] h-4 bg-vs-border mx-1 opacity-50"></div>
-                               <button onClick={() => { handleKeyNameChange(secret.keyName); setNewValue(secret.value); setNewEnv(secret.env); setEditingId(secret.id); setShowInjectModal(true); }} className="p-1.5 text-vs-text-muted hover:text-white hover:bg-vs-active rounded cursor-pointer border-none bg-transparent"><Edit2 size={13} /></button>
-                               <button onClick={() => setSecrets(s => s.filter(x => x.id !== secret.id))} className="p-1.5 text-vs-text-muted hover:text-vs-error hover:bg-vs-error/10 rounded cursor-pointer border-none bg-transparent"><Trash2 size={13} /></button>
-                            </div>
+             <div className="flex-1 overflow-y-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse">
+                   <thead className="sticky top-0 bg-vs-base z-10 border-b border-vs-border">
+                     <tr className="text-[10px] text-vs-text-muted uppercase tracking-[0.15em] font-bold">
+                       <th className="px-6 py-4">Key Identifier</th>
+                       <th className="px-6 py-4 w-1/3">Configured Value</th>
+                       <th className="px-6 py-4">Scope</th>
+                       <th className="px-6 py-4">Last Sync</th>
+                       <th className="px-6 py-4 text-right">Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody className="text-[12px]">
+                     {filteredSecrets.length > 0 ? filteredSecrets.map(secret => {
+                       const isRevealed = revealed.has(secret.id);
+                       const isCopied = copied === secret.id;
+                       return (
+                         <tr key={secret.id} className="border-b border-vs-border/50 hover:bg-vs-hover/30 transition-colors group">
+                           <td className="px-6 py-4 font-mono text-vs-accent group-hover:text-vs-text transition-colors capitalize">
+                              {secret.keyName}
+                           </td>
+                           <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <code className="block px-2.5 py-1.5 bg-vs-base border border-vs-border rounded-sm text-[11px] text-gray-400 font-mono w-full max-w-[320px] shadow-inner break-all">
+                                   {isRevealed ? secret.value : (
+                                     <>
+                                       <span aria-hidden="true">••••••••••••••••••••••••</span>
+                                       <span className="sr-only">Masked credential</span>
+                                     </>
+                                   )}
+                                </code>
+                                {!isRevealed && <div className="text-[9px] text-vs-text-muted font-bold opacity-0 group-hover:opacity-100 transition-opacity uppercase shrink-0">Encrypted</div>}
+                              </div>
+                           </td>
+                           <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-sm border ${secret.env === 'Production' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : secret.env === 'Staging' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-vs-accent/10 text-vs-accent border-vs-accent/20'}`}>
+                                {secret.env}
+                              </span>
+                           </td>
+                           <td className="px-6 py-4 text-vs-text-muted text-[10px] opacity-70">
+                             <RelativeTime timestamp={secret.timestamp} tick={tick} />
+                           </td>
+                           <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <button onClick={() => toggleReveal(secret.id)} className="p-1.5 text-vs-text-muted hover:text-vs-text hover:bg-vs-active rounded cursor-pointer border-none bg-transparent" title="Toggle Visibility">
+                                   {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                                 </button>
+                                 <button onClick={() => copyToClipboard(secret.id, secret.value)} className="p-1.5 text-vs-text-muted hover:text-vs-text hover:bg-vs-active rounded cursor-pointer border-none bg-transparent" title="Copy Value">
+                                   {isCopied ? <Check size={14} className="text-vs-success" /> : <Copy size={14} />}
+                                 </button>
+                                 <div className="w-[1px] h-4 bg-vs-border mx-1 opacity-50"></div>
+                                 <button onClick={() => { handleKeyNameChange(secret.keyName); setNewValue(secret.value); setNewEnv(secret.env); setEditingId(secret.id); setShowInjectModal(true); }} className="p-1.5 text-vs-text-muted hover:text-vs-text hover:bg-vs-active rounded cursor-pointer border-none bg-transparent"><Edit2 size={13} /></button>
+                                 <button onClick={() => setSecrets(s => s.filter(x => x.id !== secret.id))} className="p-1.5 text-vs-text-muted hover:text-vs-error hover:bg-vs-error/10 rounded cursor-pointer border-none bg-transparent"><Trash2 size={13} /></button>
+                              </div>
+                           </td>
+                         </tr>
+                       );
+                     }) : (
+                       <tr>
+                         <td colSpan={5} className="px-6 py-10">
+                            {debouncedSearchQuery ? (
+                              <div className="flex flex-col items-center gap-4 py-10 opacity-40">
+                                 <Search size={40} className="text-vs-text-muted" strokeWidth={1} />
+                                 <div className="text-center">
+                                   <p className="text-xs font-bold uppercase tracking-widest text-vs-text-muted">No key matches found</p>
+                                   <p className="text-[11px] mt-1 italic">Query "{debouncedSearchQuery}" returned zero local entities.</p>
+                                 </div>
+                                 <button onClick={handleClearSearch} className="text-vs-accent text-xs hover:underline bg-transparent border-none cursor-pointer">Reset Query</button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-3 py-10 opacity-30">
+                                <KeyRound size={40} className="text-vs-text-muted" strokeWidth={1} />
+                                <p className="text-xs uppercase tracking-widest font-bold">Vault Empty</p>
+                                <p className="text-[11px] italic">No cryptographic secrets provisioned for {filter} scope.</p>
+                              </div>
+                            )}
                          </td>
                        </tr>
-                     );
-                   }) : (
-                     <tr>
-                       <td colSpan={5} className="px-6 py-10">
-                          {debouncedSearchQuery ? (
-                            <div className="flex flex-col items-center gap-4 py-10 opacity-40">
-                               <Search size={40} className="text-vs-text-muted" strokeWidth={1} />
-                               <div className="text-center">
-                                 <p className="text-xs font-bold uppercase tracking-widest text-vs-text-muted">No key matches found</p>
-                                 <p className="text-[11px] mt-1 italic">Query "{debouncedSearchQuery}" returned zero local entities.</p>
-                               </div>
-                               <button onClick={() => setSearchQuery('')} className="text-vs-accent text-xs hover:underline bg-transparent border-none cursor-pointer">Reset Query</button>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center gap-3 py-10 opacity-30">
-                              <KeyRound size={40} className="text-vs-text-muted" strokeWidth={1} />
-                              <p className="text-xs uppercase tracking-widest font-bold">Vault Empty</p>
-                              <p className="text-[11px] italic">No cryptographic secrets provisioned for {filter} scope.</p>
-                            </div>
-                          )}
-                       </td>
-                     </tr>
-                   )}
-                 </tbody>
-             </table>
+                     )}
+                   </tbody>
+               </table>
+             </div>
            )}
+           </div>
         </div>
       </div>
 
@@ -316,8 +339,8 @@ deploy_prod:
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-8 z-[200] backdrop-blur-[2px]">
            <div className="w-96 bg-vs-panel rounded shadow-2xl border border-vs-border overflow-hidden animate-in zoom-in-95 duration-200">
               <header className="px-5 py-3 bg-vs-header border-b border-vs-border flex justify-between items-center">
-                <span className="text-sm font-medium text-white">{editingId ? 'Modify Secure Payload' : 'Inject New Entropy'}</span>
-                <button onClick={resetModal} className="text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer"><X size={18}/></button>
+                <span className="text-sm font-medium text-vs-text">{editingId ? 'Modify Secure Payload' : 'Inject New Entropy'}</span>
+                <button onClick={resetModal} className="text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={18}/></button>
               </header>
               <div className="p-6 space-y-4">
                  <div>
@@ -327,7 +350,7 @@ deploy_prod:
                  </div>
                  <div>
                    <label className="text-[10px] font-bold text-vs-text-muted uppercase tracking-widest mb-2 block">ENCRYPTED_VALUE</label>
-                   <input type="password" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="••••••••••••••••" className="w-full bg-vs-base border border-vs-border focus:border-vs-accent p-2.5 rounded text-xs text-white font-mono outline-none" />
+                   <input type="password" value={newValue} onChange={e => setNewValue(e.target.value)} placeholder="••••••••••••••••" className="w-full bg-vs-base border border-vs-border focus:border-vs-accent p-2.5 rounded text-xs text-vs-text font-mono outline-none" />
                  </div>
                  <div>
                    <label className="text-[10px] font-bold text-vs-text-muted uppercase tracking-widest mb-2 block">TARGET ENVIRONMENT</label>
@@ -335,8 +358,8 @@ deploy_prod:
                  </div>
               </div>
               <footer className="p-4 bg-vs-header border-t border-vs-border flex justify-end gap-3">
-                <button onClick={resetModal} className="px-4 py-1.5 text-xs text-vs-text-muted hover:text-white bg-transparent border border-vs-border rounded-sm cursor-pointer">Cancel</button>
-                <button onClick={handleInject} disabled={!newKeyName || !newValue} className="px-6 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded font-bold border-none shadow-md disabled:opacity-50">Authorize Injection</button>
+                <button onClick={resetModal} className="px-4 py-1.5 text-xs text-vs-text-muted hover:text-vs-text bg-transparent border border-vs-border rounded-sm cursor-pointer">Cancel</button>
+                <button onClick={handleInject} disabled={!newKeyName || !newValue} className="px-6 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-vs-text rounded font-bold border-none shadow-md disabled:opacity-50">Authorize Injection</button>
               </footer>
            </div>
         </div>
@@ -346,17 +369,17 @@ deploy_prod:
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-8 z-[200] backdrop-blur-[2px]">
            <div className="w-full max-w-2xl bg-vs-panel rounded shadow-2xl border border-vs-border overflow-hidden animate-in zoom-in-95 duration-200">
               <header className="px-5 py-3 bg-vs-header border-b border-vs-border flex justify-between items-center shadow-sm">
-                <span className="text-sm font-medium text-white flex items-center gap-2">
+                <span className="text-sm font-medium text-vs-text flex items-center gap-2">
                    <Download size={16} className="text-vs-accent" /> Infrastructure Export: {exportFormat === 'github' ? 'GitHub Actions' : 'GitLab CI'}
                 </span>
-                <button onClick={() => setShowExportModal(false)} className="text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer"><X size={18}/></button>
+                <button onClick={() => setShowExportModal(false)} className="text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={18}/></button>
               </header>
               <div className="p-6">
                  <div className="flex bg-vs-base p-1 border border-vs-border rounded w-fit mb-4">
-                    <button onClick={() => setExportFormat('github')} className={`px-4 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest border-none cursor-pointer transition-all ${exportFormat === 'github' ? 'bg-vs-active text-white shadow-sm' : 'text-vs-text-muted hover:text-white bg-transparent'}`}>GitHub</button>
-                    <button onClick={() => setExportFormat('gitlab')} className={`px-4 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest border-none cursor-pointer transition-all ${exportFormat === 'gitlab' ? 'bg-vs-active text-white shadow-sm' : 'text-vs-text-muted hover:text-white bg-transparent'}`}>GitLab</button>
+                    <button onClick={() => setExportFormat('github')} className={`px-4 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest border-none cursor-pointer transition-all ${exportFormat === 'github' ? 'bg-vs-active text-vs-text shadow-sm' : 'text-vs-text-muted hover:text-vs-text bg-transparent'}`}>GitHub</button>
+                    <button onClick={() => setExportFormat('gitlab')} className={`px-4 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest border-none cursor-pointer transition-all ${exportFormat === 'gitlab' ? 'bg-vs-active text-vs-text shadow-sm' : 'text-vs-text-muted hover:text-vs-text bg-transparent'}`}>GitLab</button>
                  </div>
-                 <div className="bg-black border border-vs-border rounded overflow-hidden">
+                 <div className="bg-vs-base border border-vs-border rounded overflow-hidden">
                     <div className="px-4 py-2 border-b border-vs-border flex justify-between items-center bg-vs-header/50">
                        <span className="text-[9px] font-bold text-vs-text-muted uppercase tracking-[0.2em]">{exportFormat === 'github' ? 'ci.yml' : '.gitlab-ci.yml'}</span>
                        <button 
@@ -371,7 +394,7 @@ deploy_prod:
                          {copiedPipeline ? 'Copied' : 'Copy Payload'}
                        </button>
                     </div>
-                    <pre className="p-5 text-[11px] text-vs-success font-mono leading-relaxed overflow-x-auto custom-scrollbar max-h-80">
+                    <pre className="p-5 text-[11px] text-vs-success font-mono leading-relaxed overflow-x-auto custom-scrollbar max-h-80 whitespace-pre">
                        {generatedYaml}
                     </pre>
                  </div>
@@ -387,7 +410,7 @@ deploy_prod:
                      a.click();
                      URL.revokeObjectURL(url);
                    }}
-                   className="px-4 py-1.5 text-xs text-white bg-vs-active hover:bg-vs-hover border border-vs-border rounded font-bold cursor-pointer"
+                   className="px-4 py-1.5 text-xs text-vs-text bg-vs-active hover:bg-vs-hover border border-vs-border rounded font-bold cursor-pointer"
                  >
                    Download Payload
                  </button>

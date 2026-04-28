@@ -141,7 +141,7 @@ export const DataPlaneNode: React.FC = () => {
   };
 
   return (
-    <main className="w-full h-full flex flex-col p-8 md:p-12 bg-vs-base text-white animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
+    <main className="w-full h-full flex flex-col p-8 md:p-12 bg-vs-base text-vs-text animate-in fade-in duration-500 overflow-y-auto custom-scrollbar">
       <header className="mb-8 border-b border-vs-border pb-6 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-vs-accent/10 rounded-lg border border-vs-accent/20">
@@ -266,14 +266,14 @@ export const DataPlaneNode: React.FC = () => {
           <footer className="mt-auto pt-8 border-t border-vs-border flex flex-wrap justify-end gap-4">
             <button
               onClick={handleReset}
-              className="px-8 py-2.5 text-sm bg-vs-bg hover:bg-vs-panel border border-vs-border rounded-sm transition-all focus:ring-2 focus:ring-vs-border text-vs-text-muted hover:text-white"
+              className="px-8 py-2.5 text-sm bg-vs-bg hover:bg-vs-panel border border-vs-border rounded-sm transition-all focus:ring-2 focus:ring-vs-border text-vs-text-muted hover:text-vs-text"
             >
               Flush All Identity Buffers
             </button>
             <button
               onClick={handleActivate}
               disabled={!licenseKey || status === 'hashing' || status === 'validating' || status === 'success'}
-              className="px-8 py-2.5 text-sm bg-vs-accent hover:bg-vs-accent-hover text-white rounded-sm transition-all border border-transparent shadow shadow-vs-accent/20 disabled:opacity-30 disabled:cursor-not-allowed flex flex-row items-center gap-2 font-semibold active:scale-95"
+              className="px-8 py-2.5 text-sm bg-vs-accent hover:bg-vs-accent-hover text-vs-text rounded-sm transition-all border border-transparent shadow shadow-vs-accent/20 disabled:opacity-30 disabled:cursor-not-allowed flex flex-row items-center gap-2 font-semibold active:scale-95"
             >
               <Key size={16} /> Negotiate Secure Link
             </button>
@@ -285,7 +285,7 @@ export const DataPlaneNode: React.FC = () => {
               <Info size={24} />
            </div>
            <div className="text-[13px] text-vs-text-muted leading-relaxed">
-             <strong className="text-white">Notice:</strong> Hardware ID generation is non-reversible and based on localized UEFI/WMI signals. 
+             <strong className="text-vs-text">Notice:</strong> Hardware ID generation is non-reversible and based on localized UEFI/WMI signals. 
              If you replace your motherboard or CPU, you will need to re-issue a setup token via the Multi-Tenant Control Plane Settings.
            </div>
         </section>

@@ -100,7 +100,7 @@ export const SettingsView: React.FC = () => {
       <header className="px-6 py-4 border-b border-vs-border bg-vs-bg flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Settings size={18} className="text-vs-accent" />
-          <h2 className="text-white text-[15px] font-medium tracking-tight">Settings</h2>
+          <h2 className="text-vs-text text-[15px] font-medium tracking-tight">Settings</h2>
         </div>
         <div className="w-72 relative">
            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-vs-text-muted" />
@@ -108,9 +108,9 @@ export const SettingsView: React.FC = () => {
              value={search}
              onChange={e => setSearch(e.target.value)}
              placeholder="Search settings (e.g. 'theme' or 'font')" 
-             className="w-full bg-vs-active border border-vs-border focus:border-vs-accent text-white px-8 py-1.5 text-xs outline-none rounded-sm transition-all shadow-inner"
+             className="w-full bg-vs-active border border-vs-border focus:border-vs-accent text-vs-text px-8 py-1.5 text-xs outline-none rounded-sm transition-all shadow-inner"
            />
-           {search && <button onClick={() => setSearch('')} className="absolute right-1.5 top-1.5 text-gray-400 hover:text-white bg-transparent border-none cursor-pointer"><X size={12}/></button>}
+           {search && <button onClick={() => setSearch('')} className="absolute right-1.5 top-1.5 text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={12}/></button>}
         </div>
       </header>
       
@@ -120,7 +120,7 @@ export const SettingsView: React.FC = () => {
             <div className="space-y-10">
               {Array.from(new Set(filteredRows.map(r => r.category))).map(cat => (
                 <section key={cat}>
-                  <h3 className="text-[11px] font-bold text-white mb-6 border-b border-vs-border pb-2 uppercase tracking-widest opacity-60">{cat}</h3>
+                  <h3 className="text-[11px] font-bold text-vs-text mb-6 border-b border-vs-border pb-2 uppercase tracking-widest opacity-60">{cat}</h3>
                   <div className="space-y-8 pl-4">
                     {filteredRows.filter(r => r.category === cat).map(row => (
                       <div key={row.id} className="flex flex-col gap-1 max-w-2xl animate-in slide-in-from-left-2 duration-300">

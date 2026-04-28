@@ -74,7 +74,7 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
          <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-vs-base">
             {/* Mock Editor Tabs */}
             <div className="h-9 bg-vs-panel flex flex-shrink-0 relative overflow-x-auto no-scrollbar">
-               <div className="px-4 h-full bg-vs-base border-t border-[#007fd4] border-r border-vs-border flex items-center gap-2 text-white min-w-[140px]">
+               <div className="px-4 h-full bg-vs-base border-t border-vs-accent border-r border-vs-border flex items-center gap-2 text-vs-text min-w-[140px]">
                   <Activity size={14} className="text-vs-accent" />
                   <span className="text-[12px] italic">{topBarTitle}.tsx</span>
                </div>
@@ -95,7 +95,7 @@ export const VSCodeShell: React.FC<VSCodeShellProps> = ({
       </div>
 
       {/* VS Code Status Bar */}
-      <footer className="h-6 bg-[#007fd4] text-white flex items-center px-3 justify-between text-[11px] font-medium flex-shrink-0 z-30">
+      <footer className="h-6 bg-vs-accent text-vs-text flex items-center px-3 justify-between text-[11px] font-medium flex-shrink-0 z-30">
         <div className="flex items-center gap-4">
            <span className="truncate">Multi-Tenant Platform Extension Host Active</span>
            <span className="hidden sm:inline-flex opacity-80 cursor-pointer hover:opacity-100">Telemetry Piped</span>
@@ -115,9 +115,9 @@ const ActivityButton = ({icon, active, onClick, label, hasAlert}: {icon: React.R
      onClick={onClick}
      aria-label={label}
      aria-current={active ? 'page' : undefined}
-     className={`relative w-full flex justify-center py-2 cursor-pointer transition-colors border-none bg-transparent focus:outline-none focus:bg-vs-active/50 ${active ? 'text-white' : 'text-vs-text-muted hover:text-gray-300'}`}
+     className={`relative w-full flex justify-center py-2 cursor-pointer transition-colors border-none bg-transparent focus:outline-none focus:bg-vs-active/50 ${active ? 'text-vs-text' : 'text-vs-text-muted hover:text-vs-text-muted/80'}`}
    >
-     {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white"></div>}
+     {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-vs-text"></div>}
      {icon}
      {hasAlert && (
        <span className="absolute top-2 right-2 w-2 h-2 bg-vs-error rounded-full border border-vs-bg" />

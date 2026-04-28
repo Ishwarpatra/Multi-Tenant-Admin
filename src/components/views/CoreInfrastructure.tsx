@@ -58,7 +58,7 @@ Result: ${rowCount} rows returned.
   return (
     <main className="p-8 animate-in fade-in duration-300 pb-10 flex h-full flex-col overflow-hidden bg-vs-base">
       <header className="mb-6 border-b border-vs-border pb-4 flex-shrink-0">
-        <h2 className="text-white text-xl font-light tracking-tight">Architectural Solutions Center</h2>
+        <h2 className="text-vs-text text-xl font-light tracking-tight">Architectural Solutions Center</h2>
         <p className="text-vs-text-muted text-[13px] mt-2 max-w-4xl leading-relaxed">
           The Control Plane implements a Zero-Trust, high-availability architecture designed to mitigate the five critical 
           bottlenecks of multi-tenant system design. Every solution is enforced at the infrastructure level rather than the application layer.
@@ -104,14 +104,14 @@ Result: ${rowCount} rows returned.
                         id="rls-query"
                         value={rlsQuery} 
                         onChange={e=>setRlsQuery(e.target.value)} 
-                        className="flex-1 bg-vs-base border border-vs-border text-white font-mono text-xs p-1.5 focus:border-vs-accent outline-none rounded-sm" 
+                        className="flex-1 bg-vs-base border border-vs-border text-vs-text font-mono text-xs p-1.5 focus:border-vs-accent outline-none rounded-sm" 
                       />
                    </div>
                 </div>
                 <button 
                   onClick={testRls} 
                   disabled={rlsLoading} 
-                  className="self-end bg-vs-accent hover:bg-vs-accent-hover text-white text-xs px-4 py-2 mt-2 flex items-center gap-2 rounded-sm transition-colors shadow-lg"
+                  className="self-end bg-vs-accent hover:bg-vs-accent-hover text-vs-text text-xs px-4 py-2 mt-2 flex items-center gap-2 rounded-sm transition-colors shadow-lg"
                 >
                   {rlsLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply Security Policy'}
                 </button>
@@ -210,7 +210,7 @@ Result: ${rowCount} rows returned.
                {activeConfig === 'billing' && (
                  <button 
                   onClick={() => onOpenSettings?.()}
-                  className="bg-vs-active hover:bg-vs-hover text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2 border border-vs-border rounded-sm animate-in slide-in-from-top-1 cursor-pointer"
+                  className="bg-vs-active hover:bg-vs-hover text-vs-text text-[11px] font-bold uppercase tracking-widest px-4 py-2 border border-vs-border rounded-sm animate-in slide-in-from-top-1 cursor-pointer"
                  >
                    Open Billing Gateways
                  </button>
@@ -258,7 +258,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
             {icon}
           </div>
           <div>
-            <h3 id={`title-${title.replace(/\s+/g, '-').toLowerCase()}`} className="text-white text-[15px] font-semibold tracking-tight">{title}</h3>
+            <h3 id={`title-${title.replace(/\s+/g, '-').toLowerCase()}`} className="text-vs-text text-[15px] font-semibold tracking-tight">{title}</h3>
             <p className="text-vs-accent text-[12px] font-mono mt-0.5 font-medium">{subtitle}</p>
           </div>
         </div>
@@ -267,7 +267,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
           aria-label={`Configure ${title}`}
           aria-expanded={isActive}
           className={`p-2 rounded-sm transition-all focus:outline-none focus:ring-2 focus:ring-vs-accent
-            ${isActive ? 'bg-vs-accent text-white rotate-90 scale-110 shadow-lg' : 'text-vs-text-muted hover:text-white hover:bg-vs-base border border-transparent'}
+            ${isActive ? 'bg-vs-accent text-vs-text rotate-90 scale-110 shadow-lg' : 'text-vs-text-muted hover:text-vs-text hover:bg-vs-base border border-transparent'}
           `}
         >
           <Settings size={18} className={isActive ? 'animate-spin' : ''} />
@@ -285,7 +285,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
         </div>
         <button 
           onClick={() => alert(`Redirecting to internal architecture wiki for: ${title}`)}
-          className="text-[11px] text-vs-text-muted hover:text-white transition-colors flex items-center gap-1.5 font-medium px-2 py-1 rounded hover:bg-vs-base border-none cursor-pointer"
+          className="text-[11px] text-vs-text-muted hover:text-vs-text transition-colors flex items-center gap-1.5 font-medium px-2 py-1 rounded hover:bg-vs-base border-none cursor-pointer"
         >
           <span>Documentation</span>
           <Terminal size={12} />

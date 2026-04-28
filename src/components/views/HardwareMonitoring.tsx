@@ -46,7 +46,7 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
   }, []);
 
   useEffect(() => {
-    if (isErrorState || isSeeding || !settings.telemetryEnabled) return;
+    if (isErrorState || isSeeding || !settings.telemetryEnabled || !isVisible) return;
 
     const interval = setInterval(() => {
       let criticalFound = false;
@@ -105,7 +105,7 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
       }
     }, 1500);
     return () => clearInterval(interval);
-  }, [isErrorState, isSeeding, settings.telemetryEnabled, addNotification]);
+  }, [isErrorState, isSeeding, settings.telemetryEnabled, addNotification, isVisible]);
 
   const filteredNodes = nodes.filter(n => {
     if (filterRegion !== 'All Regions' && n.region !== filterRegion) return false;
@@ -133,11 +133,11 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
       <div className="w-16 h-16 rounded-full bg-vs-base border border-vs-border flex items-center justify-center mb-6 shadow-xl text-vs-text-muted">
         <Icon size={32} strokeWidth={1} />
       </div>
-      <h3 className="text-white text-lg font-medium mb-2">{title}</h3>
+      <h3 className="text-vs-text text-lg font-medium mb-2">{title}</h3>
       <p className="text-vs-text-muted text-sm max-w-sm leading-relaxed mb-8">{message}</p>
       <button 
         onClick={handleRetry}
-        className="bg-vs-accent hover:bg-vs-accent-hover text-white px-6 py-2 rounded-sm text-sm font-medium transition-all shadow-lg active:scale-95 cursor-pointer border-none"
+        className="bg-vs-accent hover:bg-vs-accent-hover text-vs-text px-6 py-2 rounded-sm text-sm font-medium transition-all shadow-lg active:scale-95 cursor-pointer border-none"
       >
         Retry Connection
       </button>
@@ -169,7 +169,7 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
     <main className="p-8 animate-in fade-in duration-300">
       <div className="mb-8 flex justify-between items-start">
         <div>
-          <h2 className="text-white text-xl font-light tracking-tight">Data Plane Fleet Monitoring</h2>
+          <h2 className="text-vs-text text-xl font-light tracking-tight">Data Plane Fleet Monitoring</h2>
           <p className="text-vs-text-muted text-[13px] mt-2 max-w-3xl leading-relaxed">
             Monitor the health, connection status, and real-time telemetry of all distributed Data Plane agents (local hardware nodes) operating across different networks. Featuring real-time sparkline telemetry.
           </p>
@@ -192,21 +192,21 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-vs-bg border border-vs-border p-5 rounded flex flex-col shadow-sm relative overflow-hidden group">
-              <span className="text-gray-400 text-[11px] font-semibold uppercase tracking-widest z-10 relative">Total Agents</span>
+              <span className="text-vs-text-muted text-[11px] font-semibold uppercase tracking-widest z-10 relative">Total Agents</span>
               <span className="text-4xl font-light mt-3 tracking-tight text-vs-accent z-10 relative">2,408</span>
               <span className="text-vs-text-muted text-[11px] mt-3 font-medium border-t border-vs-border pt-2 z-10 relative">Active globally</span>
             </div>
             
             <div className="bg-vs-bg border border-vs-border p-5 rounded flex flex-col shadow-sm md:col-span-2 relative">
               <div className="flex justify-between items-start z-10">
-                <span className="text-gray-400 text-[11px] font-semibold uppercase tracking-widest">Global Ingress / Throughput</span>
+                <span className="text-vs-text-muted text-[11px] font-semibold uppercase tracking-widest">Global Ingress / Throughput</span>
                 <span className="text-vs-success flex items-center gap-2 text-xs font-mono">
                   <span className="w-2 h-2 bg-vs-success rounded-full animate-ping"></span>
                   Live stream
                 </span>
               </div>
               <div className="flex items-end gap-4 mt-2 mb-2 z-10">
-                <span className="text-4xl font-light tracking-tight text-white">{totalReqsStr}<span className="text-lg text-vs-text-muted ml-1">req/s</span></span>
+                <span className="text-4xl font-light tracking-tight text-vs-text">{totalReqsStr}<span className="text-lg text-vs-text-muted ml-1">req/s</span></span>
               </div>
               <div className="absolute bottom-0 left-0 right-0 h-24 opacity-80 pointer-events-none">
                 {isVisible && (
@@ -232,7 +232,7 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
               className={`bg-vs-bg border p-5 rounded flex flex-col shadow-sm cursor-pointer transition-all text-left focus:outline-none focus:ring-2 focus:ring-vs-error ${filterCriticalOnly ? 'border-vs-error bg-vs-error/10' : 'border-vs-border hover:border-vs-error/50'}`}
               onClick={() => setFilterCriticalOnly(!filterCriticalOnly)}
             >
-              <span className="text-gray-400 text-[11px] font-semibold uppercase tracking-widest">Degraded Nodes</span>
+              <span className="text-vs-text-muted text-[11px] font-semibold uppercase tracking-widest">Degraded Nodes</span>
               <div className="flex items-center gap-4 mt-3">
                 <div className="w-16 h-16 rounded-full border-4 border-vs-border flex items-center justify-center relative">
                   <svg className="absolute inset-0 w-full h-full transform -rotate-90">
@@ -253,14 +253,14 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
 
           <div className="bg-vs-bg border border-vs-border rounded-sm shadow-xl flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b border-vs-border flex justify-between items-center bg-vs-panel flex-wrap gap-4">
-              <h2 className="text-white text-[14px] font-medium tracking-tight">Active Hardware Ingress Logs</h2>
+              <h2 className="text-vs-text text-[14px] font-medium tracking-tight">Active Hardware Ingress Logs</h2>
               <div className="flex bg-vs-base rounded-sm flex-row border border-vs-border p-1 text-[11px]" role="group" aria-label="Region filters">
                 {regionOptions.map(r => (
                    <button 
                      key={r}
                      onClick={() => setFilterRegion(r)}
                      aria-current={filterRegion === r}
-                     className={`px-3 py-1 rounded-sm shadow-sm transition-colors border-none cursor-pointer ${filterRegion === r ? 'text-white bg-vs-active' : 'text-gray-500 hover:text-white bg-transparent'}`}
+                     className={`px-3 py-1 rounded-sm shadow-sm transition-colors border-none cursor-pointer ${filterRegion === r ? 'text-vs-text bg-vs-active' : 'text-vs-text-muted hover:text-vs-text bg-transparent'}`}
                    >
                      {r}
                    </button>
@@ -271,7 +271,7 @@ export const HardwareMonitoring: React.FC<{ isVisible?: boolean }> = ({ isVisibl
             <div className="overflow-x-auto w-full custom-scrollbar pb-2 shadow-[inset_-10px_0_10px_-10px_rgba(0,0,0,0.5)]">
               <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
-                    <tr className="border-b border-vs-border bg-vs-base text-[11px] text-gray-500 uppercase tracking-wider">
+                    <tr className="border-b border-vs-border bg-vs-base text-[11px] text-vs-text-muted uppercase tracking-wider">
                       <th className="px-6 py-3 font-semibold">Node ID (HW)</th>
                       <th className="px-6 py-3 font-semibold">Region / Tenant</th>
                       <th className="px-6 py-3 font-semibold">Status / Telemetry</th>
@@ -304,15 +304,15 @@ const NodeRow = ({hw, tenant, region, isOnline, isWarning, isCritical, throughpu
     <td className="px-6 py-4 font-mono text-vs-accent text-[11.5px] flex items-center gap-3">
         <div className="relative flex items-center justify-center">
           {isOnline && <span className="absolute animate-ping w-2 h-2 rounded-full bg-vs-success opacity-50"></span>}
-          <span className={`w-2 h-2 rounded-full z-10 ${isOnline ? 'bg-vs-success' : isWarning ? 'bg-orange-500' : 'bg-gray-500'}`}></span>
+          <span className={`w-2 h-2 rounded-full z-10 ${isOnline ? 'bg-vs-success' : isWarning ? 'bg-orange-500' : 'bg-vs-text-muted'}`}></span>
         </div>
         {hw}
     </td>
-    <td className="px-6 py-4 text-white font-medium text-[12px]">
+    <td className="px-6 py-4 text-vs-text font-medium text-[12px]">
        <div>{tenant}</div>
        <div className="text-[10px] text-vs-text-muted font-mono mt-0.5 uppercase tracking-wide">{region}</div>
     </td>
-    <td className={`px-6 py-3 font-medium text-[11px] uppercase tracking-wide flex flex-col gap-1 ${isOnline ? 'text-vs-success' : isWarning ? 'text-orange-500' : 'text-gray-500'}`}>
+    <td className={`px-6 py-3 font-medium text-[11px] uppercase tracking-wide flex flex-col gap-1 ${isOnline ? 'text-vs-success' : isWarning ? 'text-orange-500' : 'text-vs-text-muted'}`}>
       {isOnline ? 'Online / Syncing' : isWarning ? 'High Latency' : 'Offline'}
       <span className="text-vs-text-muted font-mono lowercase tracking-normal font-normal">{throughput}</span>
     </td>

@@ -14,7 +14,7 @@ export const LocalEnvManager: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [saving, setSaving] = useState(false);
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -27,31 +27,45 @@ export const LocalEnvManager: React.FC = () => {
   const activeFile = files[activeFileIdx] || { name: '', vars: [] };
 
   const handleSave = () => {
-    // Validation: Check for duplicate keys in active file
-    const keys = new Set<string>();
-    const activeFileVars = files[activeFileIdx].vars;
+    // Capture state at the moment of Save click to prevent race conditions during async write
+    const currentTargetIdx = activeFileIdx;
+    const currentFile = files[activeFileIdx];
     
+    if (!currentFile) return;
+
+    // Check for empty keys or duplicates before saving
+    const keys = new Set<string>();
+    const activeFileVars = currentFile.vars;
+    
+    // Validate empty keys
+    if (activeFileVars.some(v => !v.key.trim())) {
+      addNotification({ type: 'error', title: 'Save Prevented', message: 'All variables must have valid keys. Please fix or remove empty rows.' });
+      return;
+    }
+
     for (const v of activeFileVars) {
-      if (!v.key && v.value) {
-        addNotification({ type: 'error', title: 'Save Prevented', message: 'Variables with values must have valid keys.' });
-        return;
-      }
-      if (v.key && keys.has(v.key)) {
+      if (keys.has(v.key)) {
         addNotification({ type: 'error', title: 'Save Prevented', message: `Duplicate key detected: ${v.key}` });
         return;
       }
-      if (v.key) keys.add(v.key);
+      keys.add(v.key);
     }
 
     setSaving(true);
     setTimeout(() => {
-      // Scrubbing: Filter out entries where key is entirely empty
-      const newFiles = [...files];
-      newFiles[activeFileIdx].vars = newFiles[activeFileIdx].vars.filter(v => v.key.trim() !== '');
-      setFiles(newFiles);
+      setFiles(prev => {
+        const nextFiles = [...prev];
+        if (nextFiles[currentTargetIdx]) {
+           nextFiles[currentTargetIdx] = {
+             ...nextFiles[currentTargetIdx],
+             vars: nextFiles[currentTargetIdx].vars
+           };
+        }
+        return nextFiles;
+      });
       
       setSaving(false);
-      addNotification({ type: 'success', title: 'File Synchronized', message: `Successfully pushed ${activeFile.name} changes to workspace agent.` });
+      addNotification({ type: 'success', title: 'File Synchronized', message: `Successfully pushed ${currentFile.name} changes to workspace agent.` });
     }, 800);
   };
 
@@ -207,7 +221,7 @@ export const LocalEnvManager: React.FC = () => {
         <div className="px-4 py-2 mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-vs-text-muted">
           <span>Local Workspace</span>
           <div className="flex items-center gap-1.5">
-             <button onClick={() => setCreateModalOpen(true)} className="p-1 hover:bg-vs-active rounded text-vs-text-muted hover:text-white transition-colors border-none bg-transparent cursor-pointer" title="New File">
+             <button onClick={() => setCreateModalOpen(true)} className="p-1 hover:bg-vs-active rounded text-vs-text-muted hover:text-vs-text transition-colors border-none bg-transparent cursor-pointer" title="New File">
                <FilePlus size={13} />
              </button>
              <FolderOpen size={13} />
@@ -230,7 +244,7 @@ export const LocalEnvManager: React.FC = () => {
                 onClick={() => setActiveFileIdx(idx)}
                 role="treeitem"
                 aria-selected={activeFileIdx === idx}
-                className={`flex justify-between items-center px-6 py-1 text-[13px] border-none text-left w-full h-7 group/item ${activeFileIdx === idx ? 'bg-vs-active text-white' : 'text-vs-text-muted hover:bg-vs-hover hover:text-vs-text cursor-pointer bg-transparent'}`}
+                className={`flex justify-between items-center px-6 py-1 text-[13px] border-none text-left w-full h-7 group/item ${activeFileIdx === idx ? 'bg-vs-active text-vs-text' : 'text-vs-text-muted hover:bg-vs-hover hover:text-vs-text cursor-pointer bg-transparent'}`}
               >
                 <div className="flex items-center gap-2 pointer-events-none truncate">
                   <FileText size={14} className={activeFileIdx === idx ? 'text-vs-accent' : 'text-vs-text-muted'} />
@@ -252,7 +266,7 @@ export const LocalEnvManager: React.FC = () => {
         <header className="px-6 py-4 border-b border-vs-border flex items-center justify-between bg-vs-bg">
           <div className="flex items-center gap-3">
              <FileText size={18} className="text-vs-accent" />
-             <h2 className="text-white text-sm font-medium">{activeFile.name} <span className="text-vs-text-muted font-normal ml-1">Editor</span></h2>
+             <h2 className="text-vs-text text-sm font-medium">{activeFile.name} <span className="text-vs-text-muted font-normal ml-1">Editor</span></h2>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -261,20 +275,20 @@ export const LocalEnvManager: React.FC = () => {
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Filter variables..."
-                className="bg-vs-base border border-vs-border rounded-sm py-1.5 pl-8 pr-7 text-xs text-white focus:border-vs-accent outline-none w-48"
+                className="bg-vs-base border border-vs-border rounded-sm py-1.5 pl-8 pr-7 text-xs text-vs-text focus:border-vs-accent outline-none w-48"
               />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-1 top-1.5 p-1 text-vs-text-muted hover:text-white bg-transparent border-none cursor-pointer"><X size={13}/></button>}
+              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-1 top-1.5 p-1 text-vs-text-muted hover:text-vs-text bg-transparent border-none cursor-pointer"><X size={13}/></button>}
             </div>
             <button 
               onClick={() => setImportModalOpen(true)}
-              className="bg-vs-base hover:bg-vs-hover text-white text-xs px-3 py-1.5 rounded-sm transition-colors border border-vs-border cursor-pointer flex gap-2 items-center"
+              className="bg-vs-base hover:bg-vs-hover text-vs-text text-xs px-3 py-1.5 rounded-sm transition-colors border border-vs-border cursor-pointer flex gap-2 items-center"
             >
               Parse Raw
             </button>
             <button 
               onClick={handleSave}
               disabled={saving}
-              className="bg-vs-accent hover:bg-vs-accent-hover text-white text-xs px-4 py-1.5 rounded-sm transition-colors flex items-center gap-2 border-none cursor-pointer disabled:opacity-50"
+              className="bg-vs-accent hover:bg-vs-accent-hover text-vs-text text-xs px-4 py-1.5 rounded-sm transition-colors flex items-center gap-2 border-none cursor-pointer disabled:opacity-50"
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={14} />}
               Push Changes
@@ -291,22 +305,25 @@ export const LocalEnvManager: React.FC = () => {
             </div>
 
             {filteredVars.map((v) => (
-              <div key={v.id} className="grid grid-cols-[1fr_1.5fr_40px] gap-2 items-center animate-in fade-in duration-200">
-                <input 
-                  value={v.key}
-                  onChange={e => updateVar(v.id, 'key', e.target.value)}
-                  placeholder="DB_HOST"
-                  className="bg-vs-base border border-vs-border rounded-sm p-2 text-xs font-mono text-vs-accent focus:border-vs-accent outline-none"
-                />
+              <div key={v.id} className="grid grid-cols-[1fr_1.5fr_40px] gap-2 items-start animate-in fade-in duration-200">
+                <div className="flex flex-col gap-1">
+                  <input 
+                    value={v.key}
+                    onChange={e => updateVar(v.id, 'key', e.target.value)}
+                    placeholder="DB_HOST"
+                    className={`bg-vs-base border rounded-sm p-2 text-xs font-mono text-vs-accent focus:border-vs-accent outline-none ${!v.key.trim() ? 'border-vs-error bg-vs-error/10' : 'border-vs-border'}`}
+                  />
+                  {!v.key.trim() && <span className="text-[10px] text-vs-error font-medium">Key cannot be empty</span>}
+                </div>
                 <input 
                   value={v.value}
                   onChange={e => updateVar(v.id, 'value', e.target.value)}
                   placeholder="localhost:5432"
-                  className="bg-vs-base border border-vs-border rounded-sm p-2 text-xs font-mono text-vs-text focus:border-vs-accent outline-none"
+                  className="bg-vs-base border border-vs-border rounded-sm p-2 text-xs font-mono text-vs-text focus:border-vs-accent outline-none h-[34px]"
                 />
                 <button 
                   onClick={() => removeVar(v.id)}
-                  className="p-2 hover:bg-vs-error/10 text-vs-text-muted hover:text-vs-error transition-all rounded-sm border-none bg-transparent cursor-pointer"
+                  className="p-2 hover:bg-vs-error/10 text-vs-text-muted hover:text-vs-error transition-all rounded-sm border-none bg-transparent cursor-pointer h-[34px] flex items-center justify-center"
                   title="Remove Variable"
                 >
                   <Trash2 size={13} />
@@ -333,7 +350,7 @@ export const LocalEnvManager: React.FC = () => {
         <footer className="px-6 py-4 border-t border-vs-border flex items-start gap-4 bg-vs-bg">
            <Info size={16} className="text-vs-accent shrink-0 mt-0.5" />
            <div className="text-[11px] text-vs-text-muted leading-relaxed">
-             <strong className="text-white block mb-1">Infrastructure Synchronization Agent</strong>
+             <strong className="text-vs-text block mb-1">Infrastructure Synchronization Agent</strong>
              Workspace entities are persisted via cached local storage. All changes must be pushed to the virtual disk context before they can be evaluated by the runtime telemetry agent.
            </div>
         </footer>
@@ -345,16 +362,16 @@ export const LocalEnvManager: React.FC = () => {
              {importModalOpen && (
                <div className="w-full max-w-2xl bg-vs-bg rounded shadow-2xl border border-vs-border overflow-hidden animate-in zoom-in-95 duration-200">
                   <header className="px-4 py-3 bg-vs-header border-b border-vs-border flex justify-between items-center">
-                     <h2 className="text-sm font-medium text-white flex items-center gap-2">
+                     <h2 className="text-sm font-medium text-vs-text flex items-center gap-2">
                        <FileText size={16} className="text-vs-accent" /> Raw Import Engine
                      </h2>
-                     <button onClick={() => { setImportModalOpen(false); setRawEnvText(''); }} className="text-vs-text-muted hover:text-white border-none bg-transparent cursor-pointer">
+                     <button onClick={() => { setImportModalOpen(false); setRawEnvText(''); }} className="text-vs-text-muted hover:text-vs-text border-none bg-transparent cursor-pointer">
                        <X size={18} />
                      </button>
                   </header>
                   <div className="p-5 flex flex-col min-h-0">
                      <p className="text-[12px] text-vs-text-muted mb-4 leading-relaxed">
-                       Paste keys from a standard <code className="bg-vs-base px-1.5 py-0.5 rounded text-vs-text">.env</code> file. Existing keys will be <strong className="text-white">overwritten</strong>; new keys will be appended to the bottom of the manifest.
+                       Paste keys from a standard <code className="bg-vs-base px-1.5 py-0.5 rounded text-vs-text">.env</code> file. Existing keys will be <strong className="text-vs-text">overwritten</strong>; new keys will be appended to the bottom of the manifest.
                      </p>
                      {parseError && (
                        <div className="mb-4 bg-vs-error/10 border border-vs-error text-vs-error p-3 rounded text-[11px] flex items-center gap-2">
@@ -370,8 +387,8 @@ export const LocalEnvManager: React.FC = () => {
                      />
                   </div>
                   <footer className="px-5 py-3 bg-vs-header border-t border-vs-border flex justify-end gap-3">
-                     <button onClick={() => setImportModalOpen(false)} className="px-4 py-1.5 text-xs text-vs-text-muted hover:text-white bg-transparent border border-vs-border rounded-sm cursor-pointer">Cancel</button>
-                     <button onClick={handleRawImport} className="px-6 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded-sm border-none font-bold">Merge Variables</button>
+                     <button onClick={() => setImportModalOpen(false)} className="px-4 py-1.5 text-xs text-vs-text-muted hover:text-vs-text bg-transparent border border-vs-border rounded-sm cursor-pointer">Cancel</button>
+                     <button onClick={handleRawImport} className="px-6 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-vs-text rounded-sm border-none font-bold">Merge Variables</button>
                   </footer>
                </div>
              )}
@@ -379,9 +396,9 @@ export const LocalEnvManager: React.FC = () => {
              {/* Create File Modal */}
              {createModalOpen && (
                <div className="w-96 bg-vs-bg rounded shadow-2xl border border-vs-border overflow-hidden animate-in zoom-in-95 duration-200">
-                  <header className="px-4 py-3 bg-vs-header border-b border-vs-border flex justify-between items-center text-sm font-medium text-white">
+                  <header className="px-4 py-3 bg-vs-header border-b border-vs-border flex justify-between items-center text-sm font-medium text-vs-text">
                     New Configuration Manifest
-                    <button onClick={() => setCreateModalOpen(false)} className="text-vs-text-muted hover:text-white border-none bg-transparent cursor-pointer"><X size={16} /></button>
+                    <button onClick={() => setCreateModalOpen(false)} className="text-vs-text-muted hover:text-vs-text border-none bg-transparent cursor-pointer"><X size={16} /></button>
                   </header>
                   <div className="p-5">
                     <label className="text-[10px] font-bold text-vs-text-muted uppercase mb-2 block">FILE PATH</label>
@@ -390,13 +407,13 @@ export const LocalEnvManager: React.FC = () => {
                       value={newFileName}
                       onChange={e => setNewFileName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && executeCreateFile()}
-                      className="w-full bg-vs-base border border-vs-border focus:border-vs-accent p-2 rounded text-xs text-white outline-none"
+                      className="w-full bg-vs-base border border-vs-border focus:border-vs-accent p-2 rounded text-xs text-vs-text outline-none"
                     />
                     <p className="text-[10px] text-vs-text-muted mt-3">Valid format: <code className="text-vs-text">.env</code> or <code className="text-vs-text">.env.PRODUCTION_V2</code></p>
                   </div>
                   <footer className="p-4 bg-vs-header border-t border-vs-border flex justify-end gap-2">
-                    <button onClick={() => setCreateModalOpen(false)} className="px-3 py-1.5 text-xs text-vs-text-muted hover:text-white bg-transparent border border-vs-border cursor-pointer">Cancel</button>
-                    <button onClick={executeCreateFile} className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-white rounded font-bold border-none">Provision File</button>
+                    <button onClick={() => setCreateModalOpen(false)} className="px-3 py-1.5 text-xs text-vs-text-muted hover:text-vs-text bg-transparent border border-vs-border cursor-pointer">Cancel</button>
+                    <button onClick={executeCreateFile} className="px-4 py-1.5 text-xs bg-vs-accent hover:bg-vs-accent-hover text-vs-text rounded font-bold border-none">Provision File</button>
                   </footer>
                </div>
              )}
@@ -406,14 +423,14 @@ export const LocalEnvManager: React.FC = () => {
                 <div className="w-80 bg-vs-bg rounded shadow-2xl border border-vs-border overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="p-6 text-center">
                     <Trash2 size={40} className="text-vs-error mb-4 mx-auto opacity-80" />
-                    <h3 className="text-sm font-medium text-white mb-2">Delete workspace manifest?</h3>
+                    <h3 className="text-sm font-medium text-vs-text mb-2">Delete workspace manifest?</h3>
                     <p className="text-xs text-vs-text-muted leading-relaxed">
-                      You are about to permanently purge <span className="text-white font-mono">{files[deleteModalOpen].name}</span>. This operation is not reversible.
+                      You are about to permanently purge <span className="text-vs-text font-mono">{files[deleteModalOpen].name}</span>. This operation is not reversible.
                     </p>
                   </div>
                   <footer className="p-3 bg-vs-panel border-t border-vs-border flex items-center justify-center gap-3">
-                    <button onClick={() => setDeleteModalOpen(null)} className="flex-1 py-2 text-xs text-vs-text-muted hover:text-white bg-transparent border border-vs-border rounded hover:bg-vs-active cursor-pointer transition-colors">Abort</button>
-                    <button onClick={executeDeleteFile} className="flex-1 py-2 text-xs bg-vs-error/20 hover:bg-vs-error text-vs-error hover:text-white rounded border border-vs-error cursor-pointer font-bold transition-all">Confirm Delete</button>
+                    <button onClick={() => setDeleteModalOpen(null)} className="flex-1 py-2 text-xs text-vs-text-muted hover:text-vs-text bg-transparent border border-vs-border rounded hover:bg-vs-active cursor-pointer transition-colors">Abort</button>
+                    <button onClick={executeDeleteFile} className="flex-1 py-2 text-xs bg-vs-error/20 hover:bg-vs-error text-vs-error hover:text-vs-text rounded border border-vs-error cursor-pointer font-bold transition-all">Confirm Delete</button>
                   </footer>
                 </div>
              )}
